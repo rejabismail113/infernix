@@ -2,9 +2,13 @@
 
 declare(strict_types=1);
 
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
+use App\Kernel\Notifications\Jobs\NotifyPendingApprovals;
+use App\Modules\Commercial\Jobs\NotifyOverdueInvoices;
+use Illuminate\Support\Facades\Schedule;
 
-Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote');
+/*
+ * Scheduler (run by the `scheduler` container: php artisan schedule:work). Times are Asia/Kuala_Lumpur.
+ * @see SRS G-05
+ */
+Schedule::job(new NotifyOverdueInvoices)->dailyAt('08:10')->name('notify-overdue-invoices')->withoutOverlapping();
+Schedule::job(new NotifyPendingApprovals)->dailyAt('08:20')->name('notify-pending-approvals')->withoutOverlapping();

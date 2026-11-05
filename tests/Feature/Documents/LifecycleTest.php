@@ -109,7 +109,7 @@ it('links only to registered entity types that the user may update', function ()
     $doc = storeDocument($staff);
 
     actingAsSatisfied($staff)->post(route('documents.links.store', $doc), ['entity_type' => 'App\\Kernel\\Identity\\Models\\User', 'entity_id' => $staff->id, 'link_type' => 'attachment'])->assertSessionHasErrors('entity_type');
-    actingAsSatisfied($staff)->post(route('documents.links.store', $doc), ['entity_type' => 'invoice', 'entity_id' => 1, 'link_type' => 'attachment'])->assertSessionHasErrors('entity_type');
+    actingAsSatisfied($staff)->post(route('documents.links.store', $doc), ['entity_type' => 'not_a_registered_type', 'entity_id' => 1, 'link_type' => 'attachment'])->assertSessionHasErrors('entity_type');
     actingAsSatisfied($staff)->post(route('documents.links.store', $doc), ['entity_type' => 'user', 'entity_id' => $other->id, 'link_type' => 'attachment'])->assertForbidden();
     actingAsSatisfied($staff)->post(route('documents.links.store', $doc), ['entity_type' => 'user', 'entity_id' => $staff->id, 'link_type' => 'ssm_registration'])->assertSessionHasErrors('entity_id');
     actingAsSatisfied($staff)->post(route('documents.links.store', $doc), ['entity_type' => 'user', 'entity_id' => $staff->id, 'link_type' => 'contract'])->assertSessionHasNoErrors();

@@ -58,6 +58,18 @@ final class PermissionMatrixSeeder extends Seeder
             'bank' => ['OWN' => 'view:all create:all edit:all', 'FIN' => 'view:all create:all edit:all', 'AUD' => 'view:all export:all'],
             'finance_reports' => ['OWN' => 'view:all export:all', 'FIN' => 'view:all export:all', 'AUD' => 'view:all export:all'],
             'vendors' => ['OWN' => 'view:all create:all edit:all', 'FIN' => 'view:all create:all edit:all', 'PM' => 'view:all', 'AUD' => 'view:all'],
+            // M02 / M03 Commercial (Prompt 3)
+            'clients' => ['OWN' => 'view:all create:all edit:all export:all', 'FIN' => 'view:all create:all edit:all export:all', 'PM' => 'view:all create:all edit:all', 'AUD' => 'view:all export:all'],
+            'projects' => ['OWN' => 'view:all create:all edit:all export:all', 'FIN' => 'view:all create:all edit:all export:all', 'PM' => 'view:assigned create:all edit:assigned', 'AUD' => 'view:all export:all'],
+            'quotations' => ['OWN' => 'view:all create:all edit:all approve:all export:all', 'FIN' => 'view:all create:all edit:all approve:all export:all', 'PM' => 'view:own create:own edit:own', 'AUD' => 'view:all export:all', 'APP' => 'approve:assigned'],
+            'invoices' => ['OWN' => 'view:all create:all edit:all approve:all export:all', 'FIN' => 'view:all create:all edit:all approve:all export:all', 'AUD' => 'view:all export:all', 'APP' => 'approve:assigned'],
+            'credit_notes' => ['OWN' => 'view:all create:all edit:all approve:all export:all', 'FIN' => 'view:all create:all edit:all approve:all export:all', 'AUD' => 'view:all export:all', 'APP' => 'approve:assigned'],
+            'receipts' => ['OWN' => 'view:all create:all edit:all export:all', 'FIN' => 'view:all create:all edit:all export:all', 'AUD' => 'view:all export:all'],
+            'document_templates' => ['OWN' => 'view:all edit:all', 'FIN' => 'view:all', 'AUD' => 'view:all'],
+            // M11 Reporting (Prompt 3)
+            'dashboard_owner' => ['OWN' => 'view:all', 'AUD' => 'view:all'],
+            'dashboard_finance' => ['OWN' => 'view:all', 'FIN' => 'view:all', 'AUD' => 'view:all'],
+            'exports' => ['OWN' => 'view:own create:all', 'FIN' => 'view:own create:all', 'HR' => 'view:own create:all', 'PM' => 'view:own create:all', 'AUD' => 'view:own create:all'],
             // M06: "assigned" = owner, explicit share, or may view a linked record (inheritance, SRS §6.3).
             'documents' => [
                 'OWN' => 'view:all create:all edit:all delete:all export:all approve:all',

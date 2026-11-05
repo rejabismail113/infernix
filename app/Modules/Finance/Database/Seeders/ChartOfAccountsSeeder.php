@@ -35,6 +35,7 @@ final class ChartOfAccountsSeeder extends Seeder
         ['2040', 'Loans payable', 'liability', 'loan', 'loan_payable', true, 'pending_review'],
         ['2050', 'Refunds clearing', 'liability', 'refunds_clearing', 'refunds_clearing', true, 'pending_review'],
         ['2060', 'Unapplied receipts', 'liability', 'unapplied_receipts', 'unapplied_receipts', true, 'pending_review'],
+        ['2070', 'SST payable (output tax)', 'liability', 'tax_payable', 'sst_payable', true, 'pending_review'],
         ['3000', 'Equity', 'equity', null, null, false, 'pending_review'],
         ['3010', 'Owner capital', 'equity', 'owner_capital', 'owner_capital', true, 'non_deductible'],
         ['3020', 'Owner drawings', 'equity', 'owner_drawings', 'owner_drawings', true, 'non_deductible'],

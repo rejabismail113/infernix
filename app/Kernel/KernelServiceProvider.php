@@ -19,8 +19,10 @@ use App\Kernel\Identity\Policies\PermissionPolicy;
 use App\Kernel\Identity\Policies\UserInvitationPolicy;
 use App\Kernel\Identity\Policies\UserPolicy;
 use App\Kernel\Identity\Services\PermissionService;
+use App\Kernel\Notifications\PendingApprovalRegistry;
 use App\Kernel\Numbering\Models\NumberingSequence;
 use App\Kernel\Numbering\NumberingSequencePolicy;
+use App\Kernel\Reports\ReportCatalog;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -36,6 +38,8 @@ final class KernelServiceProvider extends ServiceProvider
     {
         $this->app->singleton(PermissionService::class);
         $this->app->singleton(DocumentLinkRegistry::class);
+        $this->app->singleton(ReportCatalog::class);
+        $this->app->singleton(PendingApprovalRegistry::class);
     }
 
     public function boot(): void

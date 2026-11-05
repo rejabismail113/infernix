@@ -159,8 +159,9 @@ final class FinanceReports
         $total = Money::zero();
         $invoices = DB::table('commercial_documents as d')->where('d.type', 'invoice')->whereIn('d.status', ['issued', 'accepted'])->whereDate('d.issue_date', '<=', $asOf->toDateString())
             ->selectRaw("d.id, d.document_no, d.counterparty_snapshot->>'name' as client, d.due_date, d.total,
-                (SELECT COALESCE(SUM(ra.amount),0) FROM receipt_allocations ra WHERE ra.invoice_id = d.id) as received,
-                (SELECT COALESCE(SUM(ca.amount),0) FROM credit_note_allocations ca WHERE ca.invoice_id = d.id) as credited")->get();
+                (SELECT COALESCE(SUM(ra.amount),0) FROM receipt_allocations ra JOIN receipts r ON r.id = ra.receipt_id WHERE ra.invoice_id = d.id AND ra.voided_at IS NULL AND r.receipt_date <= ?) as received,
+                (SELECT COALESCE(SUM(ca.amount),0) FROM credit_note_allocations ca JOIN commercial_documents cn ON cn.id = ca.credit_note_id WHERE ca.invoice_id = d.id AND ca.voided_at IS NULL AND cn.issue_date <= ?) as credited", [$asOf->toDateString(), $asOf->toDateString()])
+            ->orderBy('d.due_date')->get();
         foreach ($invoices as $i) {
             $out = Money::fromDb((string) $i->total)->minus(Money::fromDb((string) $i->received))->minus(Money::fromDb((string) $i->credited));
             if (! $out->isPositive()) {
@@ -168,7 +169,7 @@ final class FinanceReports
             }
             $days = $i->due_date ? (int) Carbon::parse((string) $i->due_date)->diffInDays($asOf, false) : 0;
             $total = $total->plus($out);
-            $rows[] = ['document_no' => $i->document_no, 'client' => $i->client, 'due_date' => (string) $i->due_date, 'days_overdue' => max(0, $days), 'bucket' => $days <= 0 ? 'current' : ($days <= 30 ? 'd1_30' : ($days <= 60 ? 'd31_60' : ($days <= 90 ? 'd61_90' : 'd90_plus'))), 'outstanding' => $this->s($out)];
+            $rows[] = ['invoice_id' => $i->id, 'document_no' => $i->document_no, 'client' => $i->client, 'due_date' => (string) $i->due_date, 'days_overdue' => max(0, $days), 'bucket' => $days <= 0 ? 'current' : ($days <= 30 ? 'd1_30' : ($days <= 60 ? 'd31_60' : ($days <= 90 ? 'd61_90' : 'd90_plus'))), 'outstanding' => $this->s($out)];
         }
 
         return ['title' => 'Receivables ageing as at '.$asOf->toDateString(), 'columns' => $columns, 'rows' => $rows, 'totals' => ['total' => $this->s($total)], 'notes' => []];
@@ -178,6 +179,9 @@ final class FinanceReports
     public function cashMovement(Carbon $from, Carbon $to): array
     {
         $rows = [];
+        $tIn = Money::zero();
+        $tOut = Money::zero();
+        $tClose = Money::zero();
         foreach (BankAccount::query()->with(['companyAccount', 'glAccount'])->get() as $bank) {
             $opening = $this->balance($bank->gl_account_id, null, $from->copy()->subDay());
             $m = DB::table('journal_lines')->join('journals', 'journals.id', '=', 'journal_lines.journal_id')->where('journal_lines.account_id', $bank->gl_account_id)
@@ -186,12 +190,15 @@ final class FinanceReports
             $in = Money::fromDb((string) $m->d);
             $out = Money::fromDb((string) $m->c);
             $rows[] = ['bank' => $bank->label(), 'gl' => $bank->glAccount->code, 'opening' => $this->s($opening), 'inflows' => $this->s($in), 'outflows' => $this->s($out), 'closing' => $this->s($opening->plus($in)->minus($out))];
+            $tIn = $tIn->plus($in);
+            $tOut = $tOut->plus($out);
+            $tClose = $tClose->plus($opening->plus($in)->minus($out));
         }
 
         return [
             'title' => 'Cash movement '.$from->toDateString().' – '.$to->toDateString(),
             'columns' => [['key' => 'bank', 'label' => 'Bank account'], ['key' => 'gl', 'label' => 'GL'], ['key' => 'opening', 'label' => 'Opening', 'numeric' => true], ['key' => 'inflows', 'label' => 'In', 'numeric' => true], ['key' => 'outflows', 'label' => 'Out', 'numeric' => true], ['key' => 'closing', 'label' => 'Closing', 'numeric' => true]],
-            'rows' => $rows, 'totals' => [], 'notes' => ['Ledger (book) balances; see bank reconciliation for statement balances.'],
+            'rows' => $rows, 'totals' => ['inflows' => $this->s($tIn), 'outflows' => $this->s($tOut), 'closing' => $this->s($tClose)], 'notes' => ['Ledger (book) balances; see bank reconciliation for statement balances.'],
         ];
     }
 
@@ -264,6 +271,80 @@ final class FinanceReports
     }
 
     /** Net balance (debit − credit) of an account up to $to (inclusive), optionally from $from. */
+    /**
+     * Revenue, cost and contribution per project from posted journal lines tagged with a project (M11-01).
+     *
+     * @return list<array{project_id: int, revenue: string, cost: string, contribution: string}>
+     */
+    public function projectContribution(Carbon $from, Carbon $to, int $limit = 5): array
+    {
+        $rows = DB::table('journal_lines as l')->join('journals as j', 'j.id', '=', 'l.journal_id')->join('chart_accounts as a', 'a.id', '=', 'l.account_id')
+            ->whereNotNull('l.project_id')->where('j.status', '!=', 'draft')->whereIn('a.type', ['income', 'expense'])
+            ->whereBetween('j.posting_date', [$from->toDateString(), $to->toDateString()])
+            ->groupBy('l.project_id')
+            ->selectRaw("l.project_id, COALESCE(SUM(CASE WHEN a.type = 'income' THEN l.credit - l.debit ELSE 0 END),0) AS revenue, COALESCE(SUM(CASE WHEN a.type = 'expense' THEN l.debit - l.credit ELSE 0 END),0) AS cost")
+            ->get()
+            ->map(function ($r): array {
+                $rev = Money::fromDb((string) $r->revenue);
+                $cost = Money::fromDb((string) $r->cost);
+
+                return ['project_id' => (int) $r->project_id, 'revenue' => $this->s($rev), 'cost' => $this->s($cost), 'contribution' => $this->s($rev->minus($cost))];
+            })
+            ->sortByDesc(fn (array $r) => (string) Money::myr($r['contribution'])->getMinorAmount())->take($limit)->values()->all();
+
+        return $rows;
+    }
+
+    /** Report key → data (shared by the Finance report pages and the Export Centre catalog). */
+    /**
+     * @param  array{from?: string|null, to?: string|null, as_of?: string|null, basis?: string|null, account_id?: int|string|null}  $f
+     * @return array<string, mixed>
+     */
+    public function run(string $report, array $f): array
+    {
+        $from = Carbon::parse($f['from'] ?? today()->startOfYear()->toDateString());
+        $to = Carbon::parse($f['to'] ?? today()->toDateString());
+        $asOf = Carbon::parse($f['as_of'] ?? today()->toDateString());
+
+        return match ($report) {
+            'trial-balance' => $this->trialBalance(null, $asOf),
+            'general-ledger' => $this->generalLedger(ChartAccount::query()->findOrFail($f['account_id'] ?? ChartAccount::query()->where('code', '1010')->value('id')), $from, $to),
+            'profit-and-loss' => $this->profitAndLoss($from, $to, ($f['basis'] ?? 'accrual') === 'cash' ? 'cash' : 'accrual'),
+            'receivables-ageing' => $this->receivablesAgeing($asOf),
+            'payables-ageing' => $this->payablesAgeing($asOf),
+            'cash-movement' => $this->cashMovement($from, $to),
+            'expenses-by-category' => $this->expensesByCategory($from, $to),
+            'claims-outstanding' => $this->claimsOutstanding(),
+            'owner-statement' => $this->ownerStatement($from, $to),
+            default => throw new \InvalidArgumentException("Unknown finance report [{$report}]."),
+        };
+    }
+
+    /**
+     * Per bank account: unmatched statement lines, statement vs book balance (M11-02 reconciliation status).
+     *
+     * @return array<string, mixed>
+     */
+    public function reconciliationSummary(Carbon $asOf): array
+    {
+        $rows = [];
+        $unmatched = 0;
+        foreach (BankAccount::query()->with(['companyAccount', 'glAccount'])->get() as $bank) {
+            $book = $this->balance($bank->gl_account_id, null, $asOf);
+            $stmt = $bank->opening_balance->plus(Money::fromDb((string) DB::table('bank_transactions')->where('bank_account_id', $bank->id)->whereDate('txn_date', '<=', $asOf->toDateString())->sum('amount')));
+            $open = (int) DB::table('bank_transactions')->where('bank_account_id', $bank->id)->where('status', 'unmatched')->whereDate('txn_date', '<=', $asOf->toDateString())->count();
+            $last = DB::table('bank_transactions')->where('bank_account_id', $bank->id)->max('txn_date');
+            $unmatched += $open;
+            $rows[] = ['bank' => $bank->label(), 'book_balance' => $this->s($book), 'statement_balance' => $this->s($stmt), 'difference' => $this->s($stmt->minus($book)), 'unmatched_lines' => $open, 'last_statement_line' => $last === null ? null : (string) $last];
+        }
+
+        return [
+            'title' => 'Bank reconciliation status as at '.$asOf->toDateString(),
+            'columns' => [['key' => 'bank', 'label' => 'Bank account'], ['key' => 'statement_balance', 'label' => 'Statement', 'numeric' => true], ['key' => 'book_balance', 'label' => 'Book', 'numeric' => true], ['key' => 'difference', 'label' => 'Difference', 'numeric' => true], ['key' => 'unmatched_lines', 'label' => 'Unmatched lines'], ['key' => 'last_statement_line', 'label' => 'Last statement line']],
+            'rows' => $rows, 'totals' => ['unmatched_lines' => (string) $unmatched], 'notes' => ['Statement balance = opening balance + imported/manual statement lines.'],
+        ];
+    }
+
     public function balance(int $accountId, ?Carbon $from, Carbon $to): BrickMoney
     {
         $q = DB::table('journal_lines')->join('journals', 'journals.id', '=', 'journal_lines.journal_id')->where('journal_lines.account_id', $accountId)

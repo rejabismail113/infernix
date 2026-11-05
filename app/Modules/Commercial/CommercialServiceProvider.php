@@ -4,10 +4,37 @@ declare(strict_types=1);
 
 namespace App\Modules\Commercial;
 
+use App\Kernel\Approval\ApprovalService;
+use App\Kernel\Documents\Contracts\IssuedDocumentRenderer;
+use App\Kernel\Documents\DocumentLinkRegistry;
+use App\Kernel\Documents\LinkableEntityType;
+use App\Kernel\Notifications\PendingApprovalRegistry;
+use App\Kernel\Reports\ReportCatalog;
+use App\Kernel\Reports\ReportDefinition;
+use App\Modules\Commercial\Enums\DocumentStatus;
+use App\Modules\Commercial\Models\CommercialDocument;
+use App\Modules\Commercial\Models\CreditNote;
+use App\Modules\Commercial\Models\DocumentTemplate;
+use App\Modules\Commercial\Models\Invoice;
+use App\Modules\Commercial\Models\Quotation;
+use App\Modules\Commercial\Models\Receipt;
+use App\Modules\Commercial\Models\ReceiptDocument;
+use App\Modules\Commercial\Models\VoucherDocument;
+use App\Modules\Commercial\Policies\CreditNotePolicy;
+use App\Modules\Commercial\Policies\DocumentTemplatePolicy;
+use App\Modules\Commercial\Policies\InvoicePolicy;
+use App\Modules\Commercial\Policies\QuotationPolicy;
+use App\Modules\Commercial\Policies\ReceiptDocumentPolicy;
+use App\Modules\Commercial\Policies\ReceiptPolicy;
+use App\Modules\Commercial\Policies\VoucherDocumentPolicy;
+use App\Modules\Commercial\Reports\CommercialReports;
+use App\Modules\Commercial\Services\CommercialIssuedDocumentRenderer;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
 /**
- * Module M03 — Commercial.
+ * Module M03 — Quotation, Billing & Document Generation.
  *
  * @see SRS §4 M03
  * @see docs/ARCHITECTURE.md
@@ -18,12 +45,47 @@ final class CommercialServiceProvider extends ServiceProvider
 
     public function register(): void
     {
-        //
+        $this->app->bind(IssuedDocumentRenderer::class, CommercialIssuedDocumentRenderer::class);
     }
 
     public function boot(): void
     {
         $this->loadMigrationsFrom(__DIR__.'/Database/Migrations');
         $this->loadRoutesFrom(__DIR__.'/Routes/web.php');
+
+        foreach ([
+            Quotation::class => QuotationPolicy::class, Invoice::class => InvoicePolicy::class, CreditNote::class => CreditNotePolicy::class,
+            Receipt::class => ReceiptPolicy::class, ReceiptDocument::class => ReceiptDocumentPolicy::class, VoucherDocument::class => VoucherDocumentPolicy::class,
+            DocumentTemplate::class => DocumentTemplatePolicy::class,
+        ] as $model => $policy) {
+            Gate::policy($model, $policy);
+        }
+
+        $catalog = $this->app->make(ReportCatalog::class);
+        $range = fn (array $f): array => [Carbon::parse($f['from'] ?? today()->startOfYear()->toDateString()), Carbon::parse($f['to'] ?? today()->toDateString())];
+        $catalog->register(new ReportDefinition('commercial.quotation-register', 'Quotation register', 'Commercial', 'quotations', fn (array $f): array => app(CommercialReports::class)->quotationRegister(...$range($f))));
+        $catalog->register(new ReportDefinition('commercial.invoice-register', 'Invoice register', 'Commercial', 'invoices', fn (array $f): array => app(CommercialReports::class)->invoiceRegister(...$range($f))));
+        $catalog->register(new ReportDefinition('commercial.issuance-history', 'Document issuance history', 'Commercial', 'invoices', fn (array $f): array => app(CommercialReports::class)->issuanceHistory(...$range($f))));
+
+        // Daily approval reminders (G-05).
+        $this->app->make(PendingApprovalRegistry::class)->register('commercial', function (): array {
+            $items = [];
+            foreach (['quotations' => Quotation::class, 'invoices' => Invoice::class, 'credit-notes' => CreditNote::class] as $route => $class) {
+                foreach ($class::query()->where('status', DocumentStatus::PendingApproval->value)->limit(200)->get() as $doc) {
+                    /** @var CommercialDocument $doc */
+                    $items[] = ['key' => $doc->type->value.':'.$doc->id.':L'.$doc->current_level, 'title' => $doc->type->label().' '.$doc->displayNo().' for '.$doc->counterpartyName().' (RM '.$doc->total->getAmount().')',
+                        'url' => route("commercial.{$route}.show", $doc->id), 'roles' => app(ApprovalService::class)->rolesFor($doc->type->value, $doc->total, $doc->current_level), 'preparer_id' => $doc->created_by];
+                }
+            }
+
+            return $items;
+        });
+
+        // Issued PDFs and supporting evidence live in the Document Centre, linked to these records (M06-01).
+        $registry = $this->app->make(DocumentLinkRegistry::class);
+        $registry->register(new LinkableEntityType('quotation', Quotation::class, 'Quotation', ['issued_document', 'client_po', 'evidence', 'attachment'], labelFor: fn (Quotation $q): string => $q->displayNo().' '.$q->counterpartyName()));
+        $registry->register(new LinkableEntityType('invoice', Invoice::class, 'Invoice', ['issued_document', 'client_po', 'evidence', 'attachment'], labelFor: fn (Invoice $i): string => $i->displayNo().' '.$i->counterpartyName()));
+        $registry->register(new LinkableEntityType('credit_note', CreditNote::class, 'Credit note', ['issued_document', 'evidence', 'attachment'], labelFor: fn (CreditNote $c): string => $c->displayNo()));
+        $registry->register(new LinkableEntityType('receipt', Receipt::class, 'Receipt', ['issued_document', 'evidence', 'attachment'], labelFor: fn (Receipt $r): string => $r->receipt_no.' '.$r->payer_name));
     }
 }

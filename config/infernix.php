@@ -56,7 +56,7 @@ return [
         ],
         'link_types' => [
             'attachment', 'receipt', 'invoice', 'contract', 'agreement', 'nda', 'photo', 'evidence', 'warranty',
-            'certificate', 'report', 'logo', 'signature', 'ssm_registration', 'issued_document', 'other',
+            'certificate', 'report', 'logo', 'signature', 'ssm_registration', 'issued_document', 'client_po', 'export_file', 'other',
         ],
         // Linking with these types freezes the document (issued commercial documents never change, M03-07).
         'freezing_link_types' => ['issued_document'],

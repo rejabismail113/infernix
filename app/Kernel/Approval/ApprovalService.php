@@ -43,6 +43,18 @@ final class ApprovalService
         return array_values($byLevel);
     }
 
+    /** @return list<string> role codes that may approve $level of an item of this type and amount */
+    public function rolesFor(string $entityType, Money $amount, int $level): array
+    {
+        foreach ($this->levels($entityType, $amount) as $rule) {
+            if ($rule->level === $level) {
+                return array_values($rule->approver_roles);
+            }
+        }
+
+        return [];
+    }
+
     /**
      * Decide whether $approver may approve level $level of an item prepared by $preparerId.
      *

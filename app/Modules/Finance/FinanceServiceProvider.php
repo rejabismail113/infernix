@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance;
 
+use App\Kernel\Approval\ApprovalService;
 use App\Kernel\Documents\DocumentLinkRegistry;
 use App\Kernel\Documents\LinkableEntityType;
 use App\Kernel\Identity\Enums\PermissionAction;
 use App\Kernel\Identity\Models\User;
 use App\Kernel\Identity\Services\PermissionService;
+use App\Kernel\Notifications\PendingApprovalRegistry;
+use App\Kernel\Reports\ReportCatalog;
+use App\Kernel\Reports\ReportDefinition;
+use App\Modules\Finance\Http\Controllers\ReportController;
 use App\Modules\Finance\Models\BankAccount;
 use App\Modules\Finance\Models\Bill;
 use App\Modules\Finance\Models\ChartAccount;
@@ -25,6 +30,8 @@ use App\Modules\Finance\Policies\ClaimPolicy;
 use App\Modules\Finance\Policies\JournalPolicy;
 use App\Modules\Finance\Policies\PaymentPolicy;
 use App\Modules\Finance\Policies\TransactionPolicy;
+use App\Modules\Finance\Reports\FinanceReports;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -58,6 +65,39 @@ final class FinanceServiceProvider extends ServiceProvider
         Gate::define('set-tax-treatment', fn (User $u): bool => app(PermissionService::class)->can($u, PermissionAction::Edit, 'tax_review'));
         Gate::define('view-finance-reports', fn (User $u): bool => app(PermissionService::class)->can($u, PermissionAction::View, 'finance_reports'));
         Gate::define('export-finance-reports', fn (User $u): bool => app(PermissionService::class)->can($u, PermissionAction::Export, 'finance_reports'));
+
+        // Export Centre (M11): every finance report, gated by finance_reports:export.
+        $catalog = $this->app->make(ReportCatalog::class);
+        $asOf = ['trial-balance', 'receivables-ageing', 'payables-ageing'];
+        foreach (ReportController::REPORTS as $key => $name) {
+            $catalog->register(new ReportDefinition('finance.'.$key, $name, 'Finance', 'finance_reports',
+                fn (array $f): array => app(FinanceReports::class)->run($key, $f),
+                match (true) {
+                    in_array($key, $asOf, true) => ['as_of'], $key === 'claims-outstanding' => [], $key === 'profit-and-loss' => ['from', 'to', 'basis'], $key === 'general-ledger' => ['from', 'to', 'account_id'], default => ['from', 'to']
+                }));
+        }
+        $catalog->register(new ReportDefinition('finance.reconciliation-status', 'Bank reconciliation status', 'Finance', 'finance_reports',
+            fn (array $f): array => app(FinanceReports::class)->reconciliationSummary(Carbon::parse($f['as_of'] ?? today()->toDateString())), ['as_of']));
+
+        // Daily approval reminders (G-05): claims, bills and payments waiting at their current level.
+        $this->app->make(PendingApprovalRegistry::class)->register('finance', function (): array {
+            $approvals = app(ApprovalService::class);
+            $items = [];
+            foreach (Claim::query()->where('status', 'pending_approval')->limit(200)->get() as $c) {
+                $items[] = ['key' => "claim:{$c->id}:L{$c->current_level}", 'title' => "Claim {$c->claim_no} (RM {$c->total_amount->getAmount()})", 'url' => route('finance.claims.show', $c->id),
+                    'roles' => $approvals->rolesFor('claim', $c->total_amount, $c->current_level), 'preparer_id' => $c->staff_user_id];
+            }
+            foreach (Bill::query()->where('status', 'pending_approval')->limit(200)->get() as $b) {
+                $items[] = ['key' => "bill:{$b->id}:L{$b->current_level}", 'title' => "Bill {$b->bill_no} (RM {$b->total_amount->getAmount()})", 'url' => route('finance.bills.show', $b->id),
+                    'roles' => $approvals->rolesFor('bill', $b->total_amount, $b->current_level), 'preparer_id' => $b->created_by];
+            }
+            foreach (Payment::query()->where('status', 'pending_approval')->limit(200)->get() as $p) {
+                $items[] = ['key' => "payment:{$p->id}:L{$p->current_level}", 'title' => "Payment {$p->payment_no} to {$p->payee_name} (RM {$p->amount->getAmount()})", 'url' => route('finance.payments.show', $p->id),
+                    'roles' => $approvals->rolesFor('payment', $p->amount, $p->current_level), 'preparer_id' => $p->created_by];
+            }
+
+            return $items;
+        });
 
         // Evidence can be attached to finance records through the Document Centre (M01-09, M06-01).
         $registry = $this->app->make(DocumentLinkRegistry::class);

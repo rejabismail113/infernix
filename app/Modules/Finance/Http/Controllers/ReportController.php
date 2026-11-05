@@ -7,7 +7,6 @@ namespace App\Modules\Finance\Http\Controllers;
 use App\Kernel\Identity\Models\User;
 use App\Kernel\Reports\CsvExport;
 use App\Modules\Finance\Http\Presenters\FinanceOptions;
-use App\Modules\Finance\Models\ChartAccount;
 use App\Modules\Finance\Reports\FinanceReports;
 use App\Modules\Finance\Reports\TaxPackService;
 use Illuminate\Http\Request;
@@ -83,18 +82,7 @@ final class ReportController
         $asOf = Carbon::parse($f['as_of'] ?? today()->toDateString());
         $filters = ['from' => $from->toDateString(), 'to' => $to->toDateString(), 'as_of' => $asOf->toDateString(), 'basis' => $f['basis'] ?? 'accrual', 'account_id' => $f['account_id'] ?? null];
 
-        $data = match ($report) {
-            'trial-balance' => $this->reports->trialBalance(null, $asOf),
-            'general-ledger' => $this->reports->generalLedger(ChartAccount::query()->findOrFail($f['account_id'] ?? ChartAccount::query()->where('code', '1010')->value('id')), $from, $to),
-            'profit-and-loss' => $this->reports->profitAndLoss($from, $to, $filters['basis']),
-            'receivables-ageing' => $this->reports->receivablesAgeing($asOf),
-            'payables-ageing' => $this->reports->payablesAgeing($asOf),
-            'cash-movement' => $this->reports->cashMovement($from, $to),
-            'expenses-by-category' => $this->reports->expensesByCategory($from, $to),
-            'claims-outstanding' => $this->reports->claimsOutstanding(),
-            'owner-statement' => $this->reports->ownerStatement($from, $to),
-            default => abort(404),
-        };
+        $data = $this->reports->run($report, $filters);
 
         return [$filters, $data];
     }

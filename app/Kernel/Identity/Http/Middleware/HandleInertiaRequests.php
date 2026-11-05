@@ -13,26 +13,28 @@ final class HandleInertiaRequests extends Middleware
 {
     protected $rootView = 'app';
 
-    /** @return list<array{label: string, href: string}> */
+    /** @return list<array{label: string, href: string, group: string}> */
     private function nav(User $user): array
     {
         $p = app(PermissionService::class);
         $items = [
-            ['Users', 'admin.users.index', 'users', 'view'],
-            ['Permissions', 'admin.permissions.index', 'permissions', 'view'],
-            ['Delegations', 'admin.delegations.index', 'delegations', 'view'],
-            ['Company', 'admin.company.edit', 'company', 'view'],
-            ['Fiscal periods', 'admin.fiscal-periods.index', 'fiscal_periods', 'view'],
-            ['Numbering', 'admin.numbering.index', 'numbering', 'view'],
-            ['Dictionaries', 'admin.dictionaries.index', 'dictionaries', 'view'],
-            ['Notification rules', 'admin.notification-rules.index', 'notification_rules', 'view'],
-            ['Audit log', 'admin.audit-log.index', 'audit_log', 'view'],
-            ['Access reports', 'admin.reports.user-access', 'reports_access', 'view'],
+            ['Documents', 'documents.index', 'documents', 'view', 'Documents'],
+            ['Document reports', 'documents.reports.inventory', 'documents', 'view', 'Documents'],
+            ['Users', 'admin.users.index', 'users', 'view', 'Administration'],
+            ['Permissions', 'admin.permissions.index', 'permissions', 'view', 'Administration'],
+            ['Delegations', 'admin.delegations.index', 'delegations', 'view', 'Administration'],
+            ['Company', 'admin.company.edit', 'company', 'view', 'Administration'],
+            ['Fiscal periods', 'admin.fiscal-periods.index', 'fiscal_periods', 'view', 'Administration'],
+            ['Numbering', 'admin.numbering.index', 'numbering', 'view', 'Administration'],
+            ['Dictionaries', 'admin.dictionaries.index', 'dictionaries', 'view', 'Administration'],
+            ['Notification rules', 'admin.notification-rules.index', 'notification_rules', 'view', 'Administration'],
+            ['Audit log', 'admin.audit-log.index', 'audit_log', 'view', 'Administration'],
+            ['Access reports', 'admin.reports.user-access', 'reports_access', 'view', 'Administration'],
         ];
         $nav = [];
-        foreach ($items as [$label, $routeName, $resource, $action]) {
+        foreach ($items as [$label, $routeName, $resource, $action, $group]) {
             if ($p->can($user, $action, $resource)) {
-                $nav[] = ['label' => $label, 'href' => route($routeName)];
+                $nav[] = ['label' => $label, 'href' => route($routeName), 'group' => $group];
             }
         }
 

@@ -39,6 +39,16 @@ final class PermissionMatrixSeeder extends Seeder
             'audit_log' => ['OWN' => 'view:all export:all', 'FIN' => 'view:all', 'AUD' => 'view:all export:all'],
             'backup_status' => ['OWN' => 'view:all approve:all', 'AUD' => 'view:all'],
             'reports_access' => ['OWN' => 'view:all export:all', 'HR' => 'view:all', 'AUD' => 'view:all export:all'],
+            // M06: "assigned" = owner, explicit share, or may view a linked record (inheritance, SRS §6.3).
+            'documents' => [
+                'OWN' => 'view:all create:all edit:all delete:all export:all approve:all',
+                'FIN' => 'view:assigned create:all edit:assigned export:assigned',
+                'PM' => 'view:assigned create:all edit:assigned',
+                'HR' => 'view:assigned create:all edit:assigned export:assigned',
+                'STF' => 'view:assigned create:own edit:own',
+                'AUD' => 'view:assigned export:assigned',
+                'APP' => 'view:assigned',
+            ],
         ];
     }
 

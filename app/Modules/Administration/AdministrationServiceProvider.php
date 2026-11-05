@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Administration;
 
+use App\Kernel\Documents\DocumentLinkRegistry;
+use App\Kernel\Documents\LinkableEntityType;
 use App\Modules\Administration\Models\ClaimType;
 use App\Modules\Administration\Models\ClaimTypeRate;
 use App\Modules\Administration\Models\Company;
@@ -58,5 +60,16 @@ final class AdministrationServiceProvider extends ServiceProvider
         ] as $model => $policy) {
             Gate::policy($model, $policy);
         }
+
+        // Company-level documents (SSM registration, logo, signature, contracts) — M06-01.
+        $this->app->make(DocumentLinkRegistry::class)->register(new LinkableEntityType(
+            type: 'company',
+            modelClass: Company::class,
+            label: 'Company',
+            linkTypes: ['ssm_registration', 'logo', 'signature', 'contract', 'agreement', 'certificate', 'report', 'evidence', 'other'],
+            evidenceSubjects: fn (string $condition): array => $condition === 'always'
+                ? Company::query()->orderBy('id')->pluck('name', 'id')->all()
+                : [],
+        ));
     }
 }

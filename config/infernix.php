@@ -34,17 +34,39 @@ return [
     ],
 
     'vault' => ['driver' => env('VAULT_DRIVER', 'null')],
+    // Document Centre (M06). Files live in a PRIVATE disk; downloads only via signed, policy-checked routes.
     'documents' => [
         'disk' => env('FILESYSTEM_DISK', 'documents'),
         'scanner' => env('DOCUMENT_SCANNER', 'null'),
+        'clamav_binary' => env('CLAMAV_BINARY', '/usr/bin/clamdscan'),
         'signed_url_ttl_minutes' => 5,
-        'max_size_kb' => 25 * 1024,
-        'allowed_mimes' => [
-            'application/pdf', 'image/jpeg', 'image/png', 'text/csv',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'max_size_kb' => (int) env('DOCUMENT_MAX_SIZE_KB', 25 * 1024),
+        // extension => MIME types accepted for that extension (content-sniffed, never trusted from the client)
+        'allowed' => [
+            'pdf' => ['application/pdf'],
+            'jpg' => ['image/jpeg'],
+            'jpeg' => ['image/jpeg'],
+            'png' => ['image/png'],
+            'csv' => ['text/csv', 'text/plain', 'application/csv'],
+            'xlsx' => ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/zip', 'application/octet-stream'],
+            'docx' => ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/zip', 'application/octet-stream'],
         ],
+        'link_types' => [
+            'attachment', 'receipt', 'invoice', 'contract', 'agreement', 'nda', 'photo', 'evidence', 'warranty',
+            'certificate', 'report', 'logo', 'signature', 'ssm_registration', 'issued_document', 'other',
+        ],
+        // Linking with these types freezes the document (issued commercial documents never change, M03-07).
+        'freezing_link_types' => ['issued_document'],
+        // Which roles may see each classification (owner of the file and explicit shares always may).
+        'classification_access' => [
+            'public_internal' => '*',
+            'confidential' => '*',
+            'restricted' => ['OWN', 'FIN', 'HR', 'PM', 'AUD'],
+            'medical' => ['OWN', 'HR'],
+        ],
+        'default_retention_rule' => 'general_7y',
     ],
+
     'pdf' => ['driver' => env('PDF_DRIVER', 'browsershot')],
     'features' => [
         'myinvois' => (bool) env('FEATURE_MYINVOIS', false),

@@ -2,11 +2,17 @@
 
 declare(strict_types=1);
 
+use App\Kernel\Documents\LinkTarget;
 use App\Kernel\Identity\Http\Middleware\EnsureMfa;
 use App\Kernel\Identity\Http\Middleware\RequireRecentAuth;
 use App\Kernel\Identity\Models\User;
+use App\Modules\DocumentCentre\Models\Document;
+use App\Modules\DocumentCentre\Services\DocumentService;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\ViewErrorBag;
+use Tests\Support\Files;
 use Tests\TestCase;
 
 /*
@@ -20,6 +26,26 @@ use Tests\TestCase;
 pest()->extend(TestCase::class)->in('Unit', 'Architecture');
 pest()->extend(TestCase::class)->use(RefreshDatabase::class)->in('Feature');
 pest()->extend(TestCase::class)->use(DatabaseTruncation::class)->in('Concurrency');
+
+/**
+ * Store a PDF through the real DocumentService (the code path every module uses).
+ *
+ * @param  array{title?: string, classification?: string, retention_rule?: string, tags?: list<string>}  $meta
+ */
+function storeDocument(User $owner, array $meta = [], ?LinkTarget $link = null, ?UploadedFile $file = null): Document
+{
+    $stored = app(DocumentService::class)->attach($file ?? Files::pdf(), $owner, $meta, $link);
+
+    return Document::query()->findOrFail($stored->documentId);
+}
+
+/** Assert the session has a validation error for $key whose message contains $needle. */
+function expectSessionErrorContains(string $key, string $needle): void
+{
+    /** @var ViewErrorBag|null $bag */
+    $bag = session('errors');
+    expect($bag?->first($key) ?? '')->toContain($needle);
+}
 
 /** The seeded Owner (OWN role). */
 function ownerUser(): User

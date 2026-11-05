@@ -10,6 +10,8 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
+use Illuminate\Routing\Middleware\SubstituteBindings;
+use Illuminate\Routing\Middleware\ValidateSignature;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -29,6 +31,9 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         // 'app' = authenticated, active (not deactivated / within AUD window), MFA satisfied.
         $middleware->group('app', ['auth', EnsureUserIsActive::class, EnsureMfa::class]);
+        // Check URL signatures BEFORE route-model binding so signed download links cannot be used to
+        // probe which record ids exist (403 for any tampered link, never 404).
+        $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: ValidateSignature::class);
         $middleware->redirectGuestsTo(fn () => route('login'));
         $middleware->redirectUsersTo(fn () => route('dashboard'));
     })

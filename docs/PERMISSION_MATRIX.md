@@ -17,7 +17,7 @@ for `reveal`, period lock/unlock, permission changes and payments above the conf
 ## Resource keys (as seeded in `permissions.resource`)
 
 `users`, `permissions`, `delegations`, `company`, `fiscal_periods`, `numbering`, `dictionaries`,
-`notification_rules`, `audit_log`, `backup_status`, `reports_access` — seeded by
+`notification_rules`, `audit_log`, `backup_status`, `reports_access`, `documents` — seeded by
 `database/seeders/PermissionMatrixSeeder.php` (Prompt 1a). Later prompts append their resources
 (`documents`, `claims`, `journals`, …). The table below is the human-readable source; the seeder must match it.
 
@@ -45,6 +45,12 @@ for `reveal`, period lock/unlock, permission changes and payments above the conf
 | classification `restricted` / `medical` | view | medical: amount+receipt only, clinical detail masked | – | view (medical, staff) | view(O) | – | – |
 | legal hold / retention rules | edit | – | – | – | – | view | – |
 | document search | A | finance-linked | S | HR-linked | O | finance-linked | S |
+
+Seeded `documents` rows (Prompt 1b): OWN view/create/edit/delete/export/approve = all; FIN view/edit/export =
+assigned, create = all; PM, HR view/edit = assigned, create = all (HR also export); STF view = assigned,
+create/edit = own; AUD view/export = assigned; APP view = assigned. "assigned" for documents = uploader,
+active explicit share, or may view a linked record (see DECISIONS A-10). `delete` = hard delete (OWN only, with
+reason + re-auth); `approve` = legal hold. Classification gates apply on top (DECISIONS A-09).
 
 ## M01 Finance
 

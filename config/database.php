@@ -97,6 +97,9 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => 'prefer',
+            // The DB session MUST use the app timezone: Laravel serialises datetimes without an offset,
+            // so a UTC session would shift every timestamptz by +8h (SRS G-12).
+            'timezone' => env('DB_TIMEZONE', env('APP_TIMEZONE', 'Asia/Kuala_Lumpur')),
         ],
 
         'sqlsrv' => [

@@ -30,7 +30,7 @@ The kernel is the only code every module may depend on. It never depends on a mo
 |---|---|---|
 | `Kernel\Identity` | users, roles (OWN/FIN/PM/HR/STF/AUD/APP), permission matrix, record scope, MFA, recent-auth, delegation | `User`, `Role`, `Permission`, `PermissionService::can()`, `RequireRecentAuth` middleware, `ApprovalDelegation` |
 | `Kernel\Audit` | append-only `audit_events`, `Auditable` trait, redaction config, `Audit::log()` | `AuditEvent`, `Auditable`, `Redactor`, `AuditLogger` |
-| `Kernel\Documents` | contracts for attaching/linking files and for signed downloads; M06 implements them | `AttachesDocuments`, `DocumentLinkRegistry` (validated morph map), `DownloadAuthorizer` |
+| `Kernel\Documents` | contracts for attaching/linking files; validated morph map of linkable records; M06 implements storage | `DocumentStore` (attach/link/freeze), `DocumentScanner`, `DocumentLinkRegistry` + `LinkableEntityType`, `LinkTarget`, `StoredDocument` |
 | `Kernel\Numbering` | gap-free `numbering_sequences` allocation with `SELECT … FOR UPDATE` inside the caller's transaction | `NumberingService::allocate(type, fiscalYear)` |
 | `Kernel\Money` | brick/money wrappers, `MoneyCast`, NUMERIC(18,4) serialisation | `Money`, `MoneyCast` |
 | `Kernel\Approval` | approval matrix (thresholds → approver role), maker-checker, Owner override with reason, delegation resolution | `ApprovalMatrix`, `ApprovalService`, `MakerCheckerViolation` |

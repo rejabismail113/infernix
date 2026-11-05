@@ -21,6 +21,10 @@ deviations are `D-0x`.
 | D-08 | Re-authentication | Session-stamped window of 10 minutes (`infernix.security.recent_auth_minutes`); mutations without a recent stamp are redirected to `/reauth` and never replayed automatically | Prompt 1a | SRS asks for a prompt, not a replay. |
 | D-09 | Seeded Owner & MFA | The seeded Owner must enrol in TOTP at first login (OWN requires MFA). Dev secret is never pre-seeded. | Prompt 1a | Tests enrol directly via a helper. |
 
+| D-10 | DB session timezone | The PostgreSQL connection runs `SET TIME ZONE 'Asia/Kuala_Lumpur'` (`config/database.php`) | Prompt 1b | Laravel writes datetimes without an offset; with a UTC session every `timestamptz` was stored 8 h in the future and PHP vs SQL comparisons disagreed. Regression test in `tests/Feature/PlatformConfigTest.php`. |
+| D-11 | Signed downloads | S3/MinIO disks get presigned object URLs (5 min, attachment disposition); any other disk gets a signed, user-bound app route that re-checks the policy and verifies the SHA-256 before streaming. URL signatures are validated before route-model binding. | Prompt 1b | No URL ever contains a fetchable storage path; tampered links are 403, never 404. |
+| D-12 | Linkable entity registry | `Kernel\Documents\DocumentLinkRegistry` is the validated morph map; each module registers its record types, allowed link types, an `accessibleIds` resolver and an evidence-subject resolver | Prompt 1b | Keeps document search permission filtering in SQL and module-agnostic. |
+
 ## SRS §9.1 open decisions — defaults assumed
 
 | ID | SRS decision | Default assumed for the build | Configurable where | Flag |
@@ -58,6 +62,21 @@ deviations are `D-0x`.
 | A-06 | Company bank account numbers | Encrypted at rest, masked to last 4 in every payload; full number only used server-side when rendering issued documents (Prompt 3). |
 | A-07 | Audit `actor_role` | Comma-joined role codes at the time of the event (a user may hold several roles). |
 | A-08 | Tax codes | SST 6%/8% items seeded inactive as placeholders; `NONE` is the only active tax code until the accountant confirms. |
+
+## Prompt 1b assumptions (Document Centre)
+
+| ID | Gap | Assumption |
+|---|---|---|
+| A-09 | Who sees which classification | `public_internal`, `confidential`: any role with document scope; `restricted`: OWN, FIN, HR, PM, AUD; `medical`: OWN, HR. The uploader and explicit share recipients always see the file (`config/infernix.php` → `documents.classification_access`). |
+| A-10 | Meaning of "assigned" for documents | Owner (uploader), an active explicit share, or permission to VIEW a linked record (inheritance, SRS §6.3). Editing additionally requires permission to UPDATE a linked record; shares are view-only. |
+| A-11 | Attaching to a record | Requires permission to UPDATE that record (adding evidence changes it), plus `documents.create`. |
+| A-12 | Retention | Every upload gets `general_7y` unless another rule is chosen; `none` means no retention period. Hard delete is refused inside the retention period, under legal hold, or for frozen (issued) documents; archive is the normal way to retire a file. |
+| A-13 | Hard delete | OWN only, with a reason and recent re-authentication. Stored objects are removed; document and version metadata stay as an audited tombstone (versions are immutable rows). |
+| A-14 | Malware scanning | Fail closed: `infected` and `error` are refused; `skipped` (NullScanner) is allowed so dev works without ClamAV. Production should set `DOCUMENT_SCANNER=clamav`. |
+| A-15 | File types | pdf, jpg/jpeg, png, xlsx, docx, csv, checked by content; macro-enabled Office files and SVG are refused; default max 25 MB (`DOCUMENT_MAX_SIZE_KB`). |
+| A-16 | Staff document folders | Linked to the `user` record until M04 registers `staff_profile` (Prompt 4). |
+| A-17 | Freezing | Linking with `issued_document` (used by M03 in Prompt 3) or calling `DocumentStore::freeze()` freezes a document; a DB trigger then refuses new versions. |
+| A-18 | Evidence rules for future modules | Seeded now (claim lines, expenses, bills, assets) and shown as "module not installed yet" until those modules register their entity types. |
 
 ## Pending legal review (PDPA 2010 / Amendment 2024)
 

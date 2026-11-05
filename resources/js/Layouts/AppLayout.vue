@@ -1,10 +1,16 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import Flash from '@/Components/Flash.vue';
 import type { SharedProps } from '@/types';
 
 /** Temporary shell; Prompt 1c replaces it with the full sidebar/breadcrumb/DataTable shell. */
 const page = usePage<SharedProps>();
+const groups = computed(() => {
+    const out: Record<string, SharedProps['nav']> = {};
+    for (const item of page.props.nav ?? []) (out[item.group] ??= []).push(item);
+    return out;
+});
 </script>
 
 <template>
@@ -28,12 +34,15 @@ const page = usePage<SharedProps>();
                 >
                     Dashboard
                 </Link>
-                <template v-if="page.props.nav?.length">
+                <template
+                    v-for="(items, group) in groups"
+                    :key="group"
+                >
                     <p class="px-3 pt-3 text-xs uppercase text-surface-400">
-                        Administration
+                        {{ group }}
                     </p>
                     <Link
-                        v-for="item in page.props.nav"
+                        v-for="item in items"
                         :key="item.href"
                         :href="item.href"
                         class="block rounded-md px-3 py-2 hover:bg-surface-100"

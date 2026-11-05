@@ -270,27 +270,43 @@ erDiagram
 Legend: `UNIQUE(dictionary_items.dictionary_id, code, effective_from)`; `CHECK(effective_to IS NULL OR
 effective_to > effective_from)`; rates are **versioned** — a claim line snapshots `rate_version_id`.
 
-## 3. Document Centre (M06)
+## 3. Document Centre (M06) — implemented in Prompt 1b
 
 ```mermaid
 erDiagram
-    documents ||--o{ document_versions : has
+    retention_rules ||--o{ documents : governs
+    documents ||--|{ document_versions : has
     documents ||--o{ entity_document_links : linked
+    documents ||--o{ document_shares : shared
     users ||--o{ documents : owner
-    required_evidence_rules }o--|| dictionaries : applies
+    companies o|--o| documents : logo_signature
 
+    retention_rules {
+        bigint id PK
+        varchar code UK "general_7y finance_7y hr_7y csr_3y short_1y"
+        varchar name
+        smallint retain_months "CHECK > 0"
+        varchar basis "upload entity_closed"
+        text notes "PLACEHOLDER"
+        boolean active
+    }
     documents {
         bigint id PK
         bigint company_id FK
-        bigint owner_id FK
+        bigint owner_id FK "uploader"
         varchar title
         varchar classification "public_internal confidential restricted medical"
-        varchar retention_rule "code"
+        jsonb tags "GIN index"
+        bigint retention_rule_id FK "nullable = no retention"
+        date retention_until
         boolean legal_hold
-        int current_version_no
-        boolean frozen "linked to an ISSUED commercial doc"
-        timestamptz archived_at
-        timestamptz hard_deleted_at
+        text legal_hold_reason
+        smallint current_version_no
+        boolean frozen "issued document: no new versions"
+        timestamptz frozen_at
+        timestamptz archived_at "soft archive"
+        bigint archived_by FK
+        timestamptz hard_deleted_at "tombstone; objects removed"
         bigint hard_deleted_by FK
         text hard_delete_reason
         timestamptz uploaded_at
@@ -298,22 +314,24 @@ erDiagram
     document_versions {
         bigint id PK
         bigint document_id FK
-        int version_no
-        varchar file_name
-        varchar mime_type "allow-list"
-        bigint size_bytes
-        char content_hash "SHA-256 hex(64)"
-        varchar storage_key UK "{company}/{entity_type}/{entity_id}/{uuid}"
-        varchar scan_status "pending clean infected skipped"
+        smallint version_no "UNIQUE with document"
+        varchar file_name "sanitised"
+        varchar extension "allow-list"
+        varchar mime_type "content-sniffed"
+        bigint size_bytes "CHECK > 0"
+        char content_hash "SHA-256 hex, CHECK ^[0-9a-f]{64}$"
+        varchar storage_key UK "{company}/{entity_type}/{entity_id}/{uuid}; never sent to clients"
+        varchar scan_status "pending clean infected skipped error"
+        varchar scanner
         bigint uploaded_by FK
         timestamptz created_at
     }
     entity_document_links {
         bigint id PK
-        varchar entity_type "validated morph map"
+        varchar entity_type "key of DocumentLinkRegistry morph map"
         bigint entity_id
         bigint document_id FK
-        varchar link_type "receipt invoice contract photo evidence warranty certificate signature logo other"
+        varchar link_type "per-type allow-list"
         boolean required_evidence
         bigint linked_by FK
         timestamptz created_at
@@ -322,22 +340,32 @@ erDiagram
         bigint id PK
         bigint document_id FK
         bigint user_id FK
-        varchar permission "view"
+        varchar permission "view only"
         timestamptz expires_at
         bigint shared_by FK
+        text reason
+        timestamptz created_at
     }
     required_evidence_rules {
         bigint id PK
-        varchar entity_type "claim_line expense_line bill asset"
-        varchar condition "e.g. claim_type.receipt_required"
+        varchar entity_type
+        varchar condition "always | module-defined, e.g. claim_type.receipt_required"
         varchar link_type
+        varchar description
         boolean active
+        text notes
     }
 ```
 
-Legend: `UNIQUE(document_versions.document_id, version_no)`; `UNIQUE(entity_document_links.entity_type,
-entity_id, document_id, link_type)`; `CHECK(entity_type IN (...morph map...))` kept in sync with the registry;
-no `public` visibility anywhere; downloads only via signed controller URL (UAT-10).
+Legend / DB rules: trigger `document_versions_immutable` — versions are never deleted and only `scan_status`
+may change; trigger `document_versions_frozen_guard` — no INSERT of a version for a `frozen` document;
+`UNIQUE(document_versions.document_id, version_no)`; `UNIQUE(document_versions.storage_key)`;
+`UNIQUE(entity_document_links.entity_type, entity_id, document_id, link_type)`;
+`UNIQUE(document_shares.document_id, user_id)`; `UNIQUE(required_evidence_rules.entity_type, condition, link_type)`;
+`companies.logo_document_id` / `signatory_signature_document_id` → `documents.id`. Linkable entity types are
+registered in code (`App\Kernel\Documents\DocumentLinkRegistry`): `user` (staff folder until M04 adds
+`staff_profile`) and `company` today; later modules add theirs. No public visibility anywhere; bytes are only
+reachable via a 5-minute signed, user-bound URL issued after the policy check (UAT-10).
 
 ## 4. Finance core (M01) — ledger
 

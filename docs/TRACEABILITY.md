@@ -8,15 +8,15 @@ Status values: `todo`, `partial`, `done`, `deferred (reason)`. Updated in the sa
 | G-01 | Login, MFA for privileged users, invitation and user deactivation | P0 | P1 | 1a | done | Kernel / M12 Administration | tests/Feature/Identity/{LoginTest,MfaTest,InvitationTest}.php |
 | G-02 | Configurable permission matrix by role/action/resource/record | P0 | P1 | 1a | done | Kernel / M12 Administration | tests/Feature/Identity/AuthorizationTest.php, tests/Feature/Audit/AuditTrailTest.php (policy versions) |
 | G-03 | Company profile, bank accounts, fiscal P0 year and numbering sequences |  | P1 | 1a | done | Kernel / M12 Administration | tests/Feature/Administration/{MasterDataTest,NumberingTest}.php, tests/Concurrency/NumberingConcurrencyTest.php |
-| G-04 | Central searchable documents with version history and access checks | P0 | P1 | 1a | todo | Kernel / M12 Administration |  |
+| G-04 | Central searchable documents with version history and access checks | P0 | P1 | 1a | done | Kernel / M12 Administration | tests/Feature/Documents/{SearchSecurityTest,VersioningTest,ReportsTest}.php |
 | G-05 | Notifications: assigned approvals, overdue invoices, renewal alerts | P1 | P1 (Prompt 3) | 1a | partial (rules table + seed; dispatch in Prompt 3) | Kernel / M12 Administration | tests/Feature/Administration/MasterDataTest.php |
 | G-06 | Company-wide audit trail incl. create/update/export/approval/reveal | P0 | P1 | 1a | done | Kernel / M12 Administration | tests/Feature/Audit/AuditTrailTest.php, tests/Feature/Identity/LoginTest.php |
-| G-07 | Attachment validation, allowed MIME, malware scanning where available | P0 | P1 | 1a | todo | Kernel / M12 Administration |  |
-| G-08 | CSV/XLSX export per authorization; PDF P0 official documents |  | P1 | 1a | partial (CSV export audited; XLSX/PDF in Prompt 3) | Kernel / M12 Administration | tests/Feature/Audit/AuditTrailTest.php (exports) |
+| G-07 | Attachment validation, allowed MIME, malware scanning where available | P0 | P1 | 1a | done (NullScanner dev; ClamAV adapter) | Kernel / M12 Administration | tests/Feature/Documents/UploadValidationTest.php |
+| G-08 | CSV/XLSX export per authorization; PDF P0 official documents |  | P1 | 1a | partial (CSV exports audited for audit log, access reports, document inventory; XLSX/PDF in Prompt 3) | Kernel / M12 Administration | tests/Feature/Audit/AuditTrailTest.php, tests/Feature/Documents/ReportsTest.php |
 | G-09 | Configurable dictionaries: categories, P0 statuses, tax codes, project types |  | P1 | 1a | done | Kernel / M12 Administration | tests/Feature/Administration/MasterDataTest.php |
-| G-10 | Soft archive / immutable posted financial records | P0 | P1 | 1a | todo | Kernel / M12 Administration |  |
-| G-11 | Global search respecting record-level access | P1 | P1 (Prompt 1b) | 1a | todo | Kernel / M12 Administration |  |
-| G-12 | Timezone Asia/Kuala_Lumpur, MYR display and date consistency | P0 | P1 | 1a | done | Kernel / M12 Administration | tests/Feature/PlatformConfigTest.php |
+| G-10 | Soft archive / immutable posted financial records | P0 | P1 | 1a | partial (document soft archive + tombstones; immutable posted financials in Prompt 2) | Kernel / M12 Administration | tests/Feature/Documents/LifecycleTest.php |
+| G-11 | Global search respecting record-level access | P1 | P1 (Prompt 1b) | 1a | partial (document metadata search row-filtered; global search later) | Kernel / M12 Administration | tests/Feature/Documents/SearchSecurityTest.php |
+| G-12 | Timezone Asia/Kuala_Lumpur, MYR display and date consistency | P0 | P1 | 1a | done | Kernel / M12 Administration | tests/Feature/PlatformConfigTest.php (incl. DB session timezone regression) |
 | M01-01 | Record project/training revenue, grants and other inflows; separate capital/loans/refunds from sales. | P0 | P1 | 2 | todo | Finance |  |
 | M01-02 | Expenses distinguish DIRECT_COMPANY, STAFF_PAID_REIMBURSABLE and OWNER_PAID. | P0 | P1 | 2 | todo | Finance |  |
 | M01-03 | Claims allow multiple lines, receipts, category, cost centre, purpose and approval chain. | P0 | P1 | 2 | todo | Finance |  |
@@ -33,14 +33,14 @@ Status values: `todo`, `partial`, `done`, `deferred (reason)`. Updated in the sa
 | M02-04 | Separate delivery status from billing/payment status. | P0 | P2 | 4 | todo | Projects |  |
 | M02-05 | Link direct costs, trips, claims and third-party expenses to project margin. | P0 | P2 | 4 | todo | Projects |  |
 | M02-06 | Track training session date, trainer, venue, participants and feedback. | P1 | P2 | 4 | todo | Projects |  |
-| M02-07 | Restrict PM access to assigned projects and explicitly shared documents. | P0 | P2 | 4 | todo | Projects |  |
+| M02-07 | Restrict PM access to assigned projects and explicitly shared documents. | P0 | P2 | 4 | partial (explicit per-document sharing with expiry) | Projects | tests/Feature/Documents/{LifecycleTest,SearchSecurityTest}.php |
 | M03-01 | Issue PDF quotations with scope lines, quantities, price, total, validity and conditions. | P0 | P1 basic / P2 | 3 (+4) | todo | Commercial |  |
 | M03-02 | Convert accepted quotation to project and/or invoice without re-keying. | P0 | P1 basic / P2 | 3 (+4) | todo | Commercial |  |
 | M03-03 | Generate invoices by milestone or items; track part payments and balance. | P0 | P1 basic / P2 | 3 (+4) | todo | Commercial |  |
 | M03-04 | Generate receipt only against actual receipt posting; no duplicate number. | P0 | P1 basic / P2 | 3 (+4) | todo | Commercial |  |
 | M03-05 | Separate incoming client PO from outgoing vendor PO. | P0 | P1 basic / P2 | 3 (+4) | todo | Commercial |  |
 | M03-06 | Generate payment voucher, staff memo, appointment and training certificates. | P1 | P1 basic / P2 | 3 (+4) | todo | Commercial |  |
-| M03-07 | Maintain immutable issued snapshots, revision history and controlled void/credit. | P0 | P1 basic / P2 | 3 (+4) | todo | Commercial |  |
+| M03-07 | Maintain immutable issued snapshots, revision history and controlled void/credit. | P0 | P1 basic / P2 | 3 (+4) | partial (frozen issued-document files at DB level; PDF snapshots in Prompt 3) | Commercial | tests/Feature/Documents/VersioningTest.php |
 | M03-08 | Use configurable numbering, logo, bank details, contact and authorized signatory. | P0 | P1 basic / P2 | 3 (+4) | partial (numbering + company profile/signatory; templates in Prompt 3) | Commercial | tests/Feature/Administration/NumberingTest.php, tests/Concurrency/NumberingConcurrencyTest.php |
 | M04-01 | Maintain active/inactive staff and staff document folders. | P0 | P2 | 4 | todo | HumanResources |  |
 | M04-02 | Staff can submit and see own timesheets and claims only. | P0 | P2 | 4 | todo | HumanResources |  |
@@ -53,11 +53,11 @@ Status values: `todo`, `partial`, `done`, `deferred (reason)`. Updated in the sa
 | M05-03 | Track assignment, handover, return and repair. | P1 | P3 | 5 | todo | Assets |  |
 | M05-04 | Track disposals and audit complete financial impacts through ledger process. | P2 | P3 | 5 | todo | Assets |  |
 | M05-05 | Store receipts and warranty documents. | P1 | P3 | 5 | todo | Assets |  |
-| M06-01 | Allow files linked to project, finance, staff, asset, CSR and company. | P0 | P1 | 1b | todo | DocumentCentre |  |
-| M06-02 | Prevent direct public access; download via authorized time-limited links. | P0 | P1 | 1b | partial (foundation) | DocumentCentre | tests/Feature/PlatformConfigTest.php (private disks) |
-| M06-03 | Version and audit files; no silent overwrite of issued documents. | P0 | P1 | 1b | todo | DocumentCentre |  |
-| M06-04 | Support metadata search P0 but enforce row permissions. |  | P1 | 1b | todo | DocumentCentre |  |
-| M06-05 | Configurable retention rules and legal hold; no permanent delete without authority. | P1 | P1 | 1b | todo | DocumentCentre |  |
+| M06-01 | Allow files linked to project, finance, staff, asset, CSR and company. | P0 | P1 | 1b | done (user + company linkable; other modules register their types) | DocumentCentre | tests/Feature/Documents/{LifecycleTest,UploadValidationTest}.php |
+| M06-02 | Prevent direct public access; download via authorized time-limited links. | P0 | P1 | 1b | done | DocumentCentre | tests/Feature/Documents/DownloadSecurityTest.php |
+| M06-03 | Version and audit files; no silent overwrite of issued documents. | P0 | P1 | 1b | done | DocumentCentre | tests/Feature/Documents/{VersioningTest,UploadValidationTest}.php |
+| M06-04 | Support metadata search P0 but enforce row permissions. |  | P1 | 1b | done | DocumentCentre | tests/Feature/Documents/{SearchSecurityTest,ReportsTest}.php |
+| M06-05 | Configurable retention rules and legal hold; no permanent delete without authority. | P1 | P1 | 1b | done | DocumentCentre | tests/Feature/Documents/{LifecycleTest,DownloadSecurityTest}.php |
 | M07-01 | Create trip and group mileage, hotels, transport, meals and expenses. | P1 | P3 | 5 | todo | Activities |  |
 | M07-02 | Link activity to client/project without duplicating costs. | P1 | P3 | 5 | todo | Activities |  |
 | M07-03 | Track budget vs actual and attach programme photos/report. | P1 | P3 | 5 | todo | Activities |  |
@@ -78,7 +78,7 @@ Status values: `todo`, `partial`, `done`, `deferred (reason)`. Updated in the sa
 | M11-02 | Finance dashboard: monthly P&L, categories, unpaid bills, collections, reconciliation. | P0 | P1 basic / P4 | 3 (+6) | todo | Reporting |  |
 | M11-03 | Project dashboard: value, status, margin, due milestones and training pipeline. | P1 | P4 | 3 (+6) | todo | Reporting |  |
 | M11-04 | Separate invoiced revenue, cash received, expense incurred and cash paid. | P0 | P1 basic / P4 | 3 (+6) | todo | Reporting |  |
-| M11-05 | Apply backend security and source row permissions to all reports/exports. | P0 | P1 basic / P4 | 3 (+6) | todo | Reporting |  |
+| M11-05 | Apply backend security and source row permissions to all reports/exports. | P0 | P1 basic / P4 | 3 (+6) | partial (row permissions applied to document reports/exports) | Reporting | tests/Feature/Documents/ReportsTest.php |
 | M11-06 | Power BI integration later via curated read-only reporting views. | P2 | P4 | 3 (+6) | todo | Reporting |  |
 | M12-01 | Invite/deactivate users and enforce MFA for finance/owner. | P0 | P1 | 1a | done | Administration | tests/Feature/Identity/{MfaTest,InvitationTest,AuthorizationTest}.php |
 | M12-02 | Role/action/resource/record permission configuration, deny-by-default. | P0 | P1 | 1a | done | Administration | tests/Feature/Identity/AuthorizationTest.php |
@@ -101,18 +101,18 @@ Status values: `todo`, `partial`, `done`, `deferred (reason)`. Updated in the sa
 | WF-07 | Credential access: request → resource-owner approval → vault entitlement → audit → revoke at offboarding; plaintext secret never returned | P0 | P3 | 5 | todo | Workflows |  |
 | WF-08 | Monthly closing: record → bank match → reconcile → trial balance → lock period → adjust with approval; all journals balance | P0 | P1/P4 | 2, 6 | todo | Workflows |  |
 | NFR-01 | Security: HTTPS/TLS, MFA for privileged roles, secure sessions, encryption at rest, secrets vault | — | P1 / P4 hardening | 6 | partial (MFA, session hardening in Prompt 6) | NFR | tests/Feature/Identity/MfaTest.php |
-| NFR-02 | Authorization: every protected endpoint denies unauthorized roles incl. direct URL and file access | — | P1 / P4 hardening | 6 | partial (deny-by-default + route 403s; full route matrix in Prompt 6) | NFR | tests/Feature/Identity/AuthorizationTest.php |
+| NFR-02 | Authorization: every protected endpoint denies unauthorized roles incl. direct URL and file access | — | P1 / P4 hardening | 6 | partial (deny-by-default, route 403s, file access; full route matrix in Prompt 6) | NFR | tests/Feature/Identity/AuthorizationTest.php, tests/Feature/Documents/DownloadSecurityTest.php |
 | NFR-03 | Auditability: who/what/when/entity/before-after; redact secret/PII | — | P1 / P4 hardening | 6 | done | NFR | tests/Feature/Audit/AuditTrailTest.php, tests/Unit/RedactorTest.php |
 | NFR-04 | Availability ≥99.5% monthly excl. approved maintenance | — | P1 / P4 hardening | 6 | todo | NFR |  |
 | NFR-05 | Performance: p95 common list/detail < 3 s under agreed load | — | P1 / P4 hardening | 6 | todo | NFR |  |
 | NFR-06 | Backup & restore: daily encrypted backup, RPO ≤24h, RTO ≤8h, quarterly restore test | — | P1 / P4 hardening | 6 | todo | NFR |  |
-| NFR-07 | Data privacy: least privilege, minimised medical/identity access, retention and consent controls | — | P1 / P4 hardening | 6 | partial (redaction/masking foundations) | NFR | tests/Feature/Audit/AuditTrailTest.php |
+| NFR-07 | Data privacy: least privilege, minimised medical/identity access, retention and consent controls | — | P1 / P4 hardening | 6 | partial (classification access, medical restriction, masking) | NFR | tests/Feature/Documents/{SearchSecurityTest,LifecycleTest}.php |
 | NFR-08 | Compatibility: responsive desktop/tablet, latest Chrome/Edge | — | P1 / P4 hardening | 6 | todo | NFR |  |
 | NFR-09 | Accessibility: keyboard navigation, labels, contrast, readable errors | — | P1 / P4 hardening | 6 | todo | NFR |  |
 | NFR-10 | Observability: error logs, trace IDs, security alerts, backup-job monitoring | — | P1 / P4 hardening | 6 | todo | NFR |  |
 | NFR-11 | Maintainability: versioned migrations, automated tests, documented API and release procedure | — | P1 / P4 hardening | 6 | partial (foundation) | NFR | tests/Architecture/*, CI workflow |
 | NFR-12 | Localization: MYR, Malaysian addresses, Asia/Kuala_Lumpur, BM/EN labels | — | P1 / P4 hardening | 6 | partial (foundation) | NFR | tests/Feature/PlatformConfigTest.php |
-| UAT-01 | Staff opens another staff claim via changed URL → 403, no data/attachment exposure | P0 | P1 | 1a, 2 | done (users; extended to claims in Prompt 2) | UAT | tests/Feature/Identity/AuthorizationTest.php |
+| UAT-01 | Staff opens another staff claim via changed URL → 403, no data/attachment exposure | P0 | P1 | 1a, 2 | done (users, documents; claims in Prompt 2) | UAT | tests/Feature/Identity/AuthorizationTest.php, tests/Feature/Documents/DownloadSecurityTest.php |
 | UAT-02 | Mileage claim → approval → payout: single accounting impact, payment linked, audit complete | P0 | P1 | 2 | todo | UAT |  |
 | UAT-03 | Laptop purchase with company account → vendor payment + asset registration, no double counting | P0 | P3 | 5 | todo | UAT |  |
 | UAT-04 | Invoice RM10,000 paid RM3,000 → outstanding RM7,000, receipt linked | P0 | P1 | 3 | todo | UAT |  |
@@ -121,13 +121,13 @@ Status values: `todo`, `partial`, `done`, `deferred (reason)`. Updated in the sa
 | UAT-07 | Time on unassigned project rejected unless role-based exception | P0 | P2 | 4 | todo | UAT |  |
 | UAT-08 | Secret via report export → no password/API secret in export or log | P0 | P3/P4 | 5, 6 | partial (exports/audit swept; logs/notifications/search in Prompt 5) | UAT | tests/Feature/Audit/AuditTrailTest.php |
 | UAT-09 | Edit posted txn in closed period blocked; authorized adjustment/reversal available | P0 | P1 | 2 | todo | UAT |  |
-| UAT-10 | Document access without authorization denied even with copied direct file URL | P0 | P1 | 1b | partial (foundation) | UAT | tests/Feature/PlatformConfigTest.php (private disks) |
+| UAT-10 | Document access without authorization denied even with copied direct file URL | P0 | P1 | 1b | done | UAT | tests/Feature/Documents/DownloadSecurityTest.php |
 | UAT-11 | Approve own payment without delegated authority → rejected or flagged for Owner explicit override | P0 | P1 | 2 | todo | UAT |  |
 | UAT-12 | Subscription renewal creates scheduled event; finance transaction only when bill/payment recorded | P0 | P3 | 5 | todo | UAT |  |
 
 ## Coverage summary
 
-Total requirement IDs: 119. After Prompt 1a: done 12, partial 14, todo 93 (see rows).
+Total requirement IDs: 119. After Prompt 1b: done 20, partial 20, todo 79 (see rows).
 
 ## Prompt → phase map
 

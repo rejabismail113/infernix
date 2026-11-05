@@ -9,6 +9,8 @@ use App\Modules\Administration\Database\Seeders\DictionarySeeder;
 use App\Modules\Administration\Database\Seeders\FiscalYearSeeder;
 use App\Modules\Administration\Database\Seeders\NotificationRuleSeeder;
 use App\Modules\Administration\Database\Seeders\NumberingSequenceSeeder;
+use App\Modules\DocumentCentre\Database\Seeders\RequiredEvidenceRuleSeeder;
+use App\Modules\DocumentCentre\Database\Seeders\RetentionRuleSeeder;
 use Illuminate\Database\Seeder;
 
 final class DatabaseSeeder extends Seeder
@@ -24,6 +26,8 @@ final class DatabaseSeeder extends Seeder
             NumberingSequenceSeeder::class,
             DictionarySeeder::class,
             NotificationRuleSeeder::class,
+            RetentionRuleSeeder::class,
+            RequiredEvidenceRuleSeeder::class,
         ]);
     }
 }

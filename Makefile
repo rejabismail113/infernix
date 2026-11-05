@@ -1,5 +1,5 @@
 # Infernix One — developer commands. `make setup` after `docker compose up -d` gives a running app
-# at http://localhost:8000 with the seeded Owner login (see .env SEED_OWNER_*).
+# at http://localhost:$APP_PORT (default 8010) with the seeded Owner login (see .env SEED_OWNER_*).
 SHELL := /bin/bash
 DC    := docker compose
 APP   := $(DC) exec -T app
@@ -23,8 +23,8 @@ setup: ## First-time setup: env, deps, key, migrate, seed, build assets
 	$(APP) php artisan migrate --force --no-interaction
 	$(APP) php artisan db:seed --force --no-interaction
 	$(APP) php artisan storage:link || true
-	@echo "✔ App: http://localhost:8000  (login: see SEED_OWNER_EMAIL / SEED_OWNER_PASSWORD in .env)"
-	@echo "✔ Mailpit: http://localhost:8025   MinIO console: http://localhost:9001   Horizon: http://localhost:8000/horizon"
+	@echo "✔ App: http://localhost:$${APP_PORT:-8010}  (login: see SEED_OWNER_EMAIL / SEED_OWNER_PASSWORD in .env)"
+	@echo "✔ Mailpit: http://localhost:8025   MinIO console: http://localhost:9001   Horizon: http://localhost:$${APP_PORT:-8010}/horizon"
 
 fresh: ## Drop & recreate DB with seed
 	$(APP) php artisan migrate:fresh --seed --force --no-interaction

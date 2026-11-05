@@ -110,7 +110,7 @@ posting recipes. `tests/Architecture/ArchitectureTest.php` enforces the boundari
 ## Running things
 
 ```bash
-docker compose up -d && make setup      # full dev stack, app at http://localhost:8000
+docker compose up -d && make setup      # full dev stack, app at http://localhost:8010 (APP_PORT in .env)
 make test        # Pest (Postgres) + Vitest
 make lint        # Pint --test, Larastan L6, ESLint, vue-tsc
 make fix         # Pint + eslint --fix

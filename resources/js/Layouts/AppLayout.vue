@@ -1,76 +1,115 @@
 <script setup lang="ts">
-import { Link, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
-import Flash from '@/Components/Flash.vue';
+/**
+ * Application shell (reference layout: sidebar + breadcrumb + title/status chip + content cards).
+ * Usage: <AppLayout title="Users" :breadcrumbs="[...]" status="active"> … <template #actions>…</template>
+ */
+import { Head, Link, usePage } from '@inertiajs/vue3';
+import { ref } from 'vue';
+import ToastHost from '@/Components/Feedback/ToastHost.vue';
+import Icon from '@/Components/Icon.vue';
+import Breadcrumbs, { type Crumb } from '@/Components/Shell/Breadcrumbs.vue';
+import PageHeader from '@/Components/Shell/PageHeader.vue';
+import Sidebar from '@/Components/Shell/Sidebar.vue';
 import type { SharedProps } from '@/types';
 
-/** Temporary shell; Prompt 1c replaces it with the full sidebar/breadcrumb/DataTable shell. */
-const page = usePage<SharedProps>();
-const groups = computed(() => {
-    const out: Record<string, SharedProps['nav']> = {};
-    for (const item of page.props.nav ?? []) (out[item.group] ??= []).push(item);
-    return out;
+withDefaults(defineProps<{ title?: string; breadcrumbs?: Crumb[]; status?: string | null; statusLabel?: string }>(), {
+    title: '', breadcrumbs: () => [], status: null, statusLabel: undefined,
 });
+
+const page = usePage<SharedProps>();
+const mobileOpen = ref(false);
 </script>
 
 <template>
+    <Head :title="title" />
+    <a
+        href="#main"
+        class="sr-only z-50 rounded bg-white px-3 py-2 focus:not-sr-only focus:fixed focus:left-2 focus:top-2"
+    >Skip to content</a>
     <div class="flex min-h-screen bg-surface-50">
-        <aside class="hidden w-60 flex-col border-r border-surface-200 bg-white md:flex">
-            <div class="flex h-16 items-center gap-2 px-4">
-                <img
-                    src="/images/infernix-logo.svg"
-                    alt=""
-                    class="h-9"
-                >
-                <span class="font-semibold">Infernix One</span>
+        <aside class="hidden w-64 shrink-0 border-r border-surface-200 bg-white lg:block">
+            <div class="sticky top-0 h-screen">
+                <Sidebar
+                    :items="page.props.nav ?? []"
+                    :current-url="page.url"
+                    :company-name="page.props.app.company.name"
+                />
             </div>
-            <nav
-                class="flex-1 space-y-1 px-2 py-2 text-sm"
-                aria-label="Main"
-            >
-                <Link
-                    :href="route('dashboard')"
-                    class="block rounded-md px-3 py-2 font-medium hover:bg-surface-100"
-                >
-                    Dashboard
-                </Link>
-                <template
-                    v-for="(items, group) in groups"
-                    :key="group"
-                >
-                    <p class="px-3 pt-3 text-xs uppercase text-surface-400">
-                        {{ group }}
-                    </p>
-                    <Link
-                        v-for="item in items"
-                        :key="item.href"
-                        :href="item.href"
-                        class="block rounded-md px-3 py-2 hover:bg-surface-100"
-                    >
-                        {{ item.label }}
-                    </Link>
-                </template>
-            </nav>
         </aside>
-        <div class="flex flex-1 flex-col">
-            <header class="flex h-16 items-center justify-between border-b border-surface-200 bg-white px-6">
-                <slot name="header" />
-                <div class="flex items-center gap-4 text-sm">
-                    <span class="text-surface-700">{{ page.props.auth.user?.name }}</span>
+        <div
+            v-if="mobileOpen"
+            class="fixed inset-0 z-40 flex lg:hidden"
+        >
+            <div
+                class="w-64 bg-white shadow-xl"
+                @keydown.esc="mobileOpen = false"
+            >
+                <Sidebar
+                    :items="page.props.nav ?? []"
+                    :current-url="page.url"
+                    @navigate="mobileOpen = false"
+                />
+            </div>
+            <button
+                type="button"
+                class="flex-1 bg-surface-900/30"
+                aria-label="Close menu"
+                @click="mobileOpen = false"
+            />
+        </div>
+
+        <div class="flex min-w-0 flex-1 flex-col">
+            <header class="flex h-14 items-center justify-between gap-4 border-b border-surface-200 bg-white px-4 lg:px-8">
+                <div class="flex items-center gap-3">
+                    <button
+                        type="button"
+                        class="rounded p-1.5 text-surface-600 hover:bg-surface-100 lg:hidden"
+                        aria-label="Open menu"
+                        @click="mobileOpen = true"
+                    >
+                        <Icon name="menu" />
+                    </button>
+                    <Breadcrumbs :items="breadcrumbs" />
+                </div>
+                <div class="flex items-center gap-3 text-sm">
+                    <span
+                        class="hidden text-surface-700 sm:inline"
+                        data-test="user-name"
+                    >{{ page.props.auth.user?.name }}</span>
                     <Link
                         :href="route('logout')"
                         method="post"
                         as="button"
-                        class="rounded-md border border-surface-300 px-3 py-1.5 hover:bg-surface-100"
+                        class="inline-flex items-center gap-1.5 rounded-md border border-surface-300 px-3 py-1.5 hover:bg-surface-100"
                     >
-                        Log out
+                        <Icon
+                            name="logout"
+                            :size="16"
+                        /> Log out
                     </Link>
                 </div>
             </header>
-            <main class="flex-1 p-6">
-                <Flash />
+            <main
+                id="main"
+                class="flex-1 space-y-5 px-4 py-6 lg:px-8"
+                tabindex="-1"
+            >
+                <PageHeader
+                    v-if="title"
+                    :title="title"
+                    :status="status"
+                    :status-label="statusLabel"
+                >
+                    <template #chips>
+                        <slot name="chips" />
+                    </template>
+                    <template #actions>
+                        <slot name="actions" />
+                    </template>
+                </PageHeader>
                 <slot />
             </main>
         </div>
     </div>
+    <ToastHost />
 </template>

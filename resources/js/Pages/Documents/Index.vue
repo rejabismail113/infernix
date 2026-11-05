@@ -1,14 +1,22 @@
 <script setup lang="ts">
-import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { computed, reactive } from 'vue';
+import { Link, useForm } from '@inertiajs/vue3';
+import { computed, reactive, ref } from 'vue';
+import Button from '@/Components/Button.vue';
+import FileDropzone from '@/Components/Form/FileDropzone.vue';
 import FormField from '@/Components/FormField.vue';
+import Modal from '@/Components/Modal.vue';
+import PickerModal, { type PickerItem } from '@/Components/PickerModal.vue';
+import StatusChip from '@/Components/StatusChip.vue';
+import DataTable from '@/Components/Table/DataTable.vue';
+import { useLinkPicker } from '@/composables/useLinkPicker';
+import { toPagination, useServerTable, type LaravelPage } from '@/composables/useServerTable';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { formatBytes } from '@/lib/format';
 import type { DocumentRow, EntityTypeOption } from '@/types/documents';
+import type { TableColumn } from '@/types/table';
 
-interface Paginated { data: DocumentRow[]; links: { url: string | null; label: string; active: boolean }[]; total: number }
 const props = defineProps<{
-    documents: Paginated;
+    documents: LaravelPage<DocumentRow>;
     filters: Record<string, string | number | boolean | null>;
     classifications: { value: string; label: string }[];
     entityTypes: EntityTypeOption[];
@@ -22,37 +30,89 @@ const f = reactive({
     entity_type: (props.filters.entity_type as string) ?? '',
     include_archived: Boolean(props.filters.include_archived),
 });
-const search = () => router.get(route('documents.index'), Object.fromEntries(Object.entries({ ...f, include_archived: f.include_archived ? 1 : '' }).filter(([, v]) => v !== '')), { preserveState: true });
+const table = useServerTable(() => route('documents.index'), () => props.filters);
+const search = () => table.visit({ ...f, include_archived: f.include_archived ? 1 : '', page: 1 });
 
+const columns: TableColumn[] = [
+    { key: 'title', label: 'Title', sortable: true, hideable: false },
+    { key: 'file_name', label: 'File' },
+    { key: 'classification', label: 'Classification', sortable: true },
+    { key: 'version', label: 'Ver.', sortable: true, numeric: true },
+    { key: 'links', label: 'Linked to' },
+    { key: 'owner', label: 'Owner' },
+    { key: 'uploaded_at', label: 'Uploaded', sortable: true },
+];
+
+// --- upload with optional link (picker) ---
+const uploadOpen = ref(false);
+const pickerOpen = ref(false);
+const pickerTab = ref<string | null>(props.entityTypes[0]?.type ?? null);
+const picker = useLinkPicker();
+const linked = ref<{ type: string; item: PickerItem } | null>(null);
 const upload = useForm<{ file: File | null; title: string; classification: string; retention_rule: string; entity_type: string; entity_id: string; link_type: string }>({
     file: null, title: '', classification: 'confidential', retention_rule: '', entity_type: '', entity_id: '', link_type: '',
 });
-const linkTypes = computed(() => props.entityTypes.find((t) => t.type === upload.entity_type)?.link_types ?? []);
-const label = (l: string) => l.replace('&laquo;', '«').replace('&raquo;', '»');
+const linkTypes = computed(() => props.entityTypes.find((t) => t.type === linked.value?.type)?.link_types ?? []);
+function openPicker() {
+    pickerOpen.value = true;
+    picker.search(pickerTab.value, '');
+}
+function onPicked(item: PickerItem, tab: string | null) {
+    if (!tab) return;
+    linked.value = { type: tab, item };
+    upload.entity_type = tab;
+    upload.entity_id = String(item.id);
+    upload.link_type = props.entityTypes.find((t) => t.type === tab)?.link_types[0] ?? '';
+}
+function clearLink() {
+    linked.value = null;
+    upload.entity_type = '';
+    upload.entity_id = '';
+    upload.link_type = '';
+}
 function submit() {
     upload.transform((d) => Object.fromEntries(Object.entries(d).filter(([, v]) => v !== '' && v !== null))).post(route('documents.store'), { forceFormData: true });
 }
 </script>
 
 <template>
-    <AppLayout>
-        <Head title="Documents" />
-        <template #header>
-            <h1 class="text-lg font-semibold">
-                Documents <span class="text-sm font-normal text-surface-500">({{ documents.total }})</span>
-            </h1>
+    <AppLayout
+        title="Documents"
+        :breadcrumbs="[{ label: 'Documents' }]"
+    >
+        <template #chips>
+            <StatusChip
+                status="info"
+                tone="info"
+                :label="`${documents.total} accessible`"
+            />
+        </template>
+        <template #actions>
+            <Link
+                :href="route('documents.reports.inventory')"
+                class="text-sm font-medium text-brand-700 hover:underline"
+            >
+                Reports
+            </Link>
+            <Button
+                v-if="can.create"
+                @click="uploadOpen = true"
+            >
+                Upload document
+            </Button>
         </template>
 
         <form
-            class="mb-4 flex flex-wrap gap-2 text-sm"
+            class="flex flex-wrap items-center gap-2 rounded-lg border border-surface-200 bg-white p-3 text-sm"
             role="search"
             @submit.prevent="search"
         >
             <input
                 v-model="f.q"
-                placeholder="Search title, file name, tag"
-                aria-label="Search"
-                class="w-64 rounded-md border border-surface-300 px-3 py-2"
+                type="search"
+                placeholder="Search title, file name or tag"
+                aria-label="Search documents"
+                class="w-72 rounded-md border border-surface-300 px-3 py-2"
             >
             <select
                 v-model="f.classification"
@@ -60,7 +120,7 @@ function submit() {
                 class="rounded-md border border-surface-300 px-2 py-2"
             >
                 <option value="">
-                    any classification
+                    Any classification
                 </option>
                 <option
                     v-for="c in classifications"
@@ -76,7 +136,7 @@ function submit() {
                 class="rounded-md border border-surface-300 px-2 py-2"
             >
                 <option value="">
-                    linked to anything
+                    Linked to anything
                 </option>
                 <option
                     v-for="t in entityTypes"
@@ -86,152 +146,91 @@ function submit() {
                     {{ t.label }}
                 </option>
             </select>
-            <label class="flex items-center gap-1"><input
+            <label class="flex items-center gap-1.5"><input
                 v-model="f.include_archived"
                 type="checkbox"
-            > include archived</label>
-            <button
-                type="submit"
-                class="rounded-md bg-brand-600 px-3 py-2 text-white hover:bg-brand-700"
-            >
+            > Include archived</label>
+            <Button type="submit">
                 Search
-            </button>
-            <Link
-                :href="route('documents.reports.inventory')"
-                class="rounded-md border border-surface-300 px-3 py-2 hover:bg-surface-100"
-            >
-                Reports
-            </Link>
+            </Button>
         </form>
 
-        <div class="overflow-x-auto rounded-lg border border-surface-200 bg-white">
-            <table class="min-w-full text-sm">
-                <thead class="bg-surface-100 text-left text-xs uppercase text-surface-500">
-                    <tr>
-                        <th class="px-3 py-2">
-                            Title
-                        </th><th class="px-3 py-2">
-                            File
-                        </th><th class="px-3 py-2">
-                            Classification
-                        </th><th class="px-3 py-2">
-                            Ver.
-                        </th><th class="px-3 py-2">
-                            Linked to
-                        </th><th class="px-3 py-2">
-                            Owner
-                        </th><th class="px-3 py-2">
-                            Uploaded
-                        </th><th class="px-3 py-2" />
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr
-                        v-for="d in documents.data"
-                        :key="d.id"
-                        class="border-t border-surface-100"
-                    >
-                        <td class="px-3 py-2">
-                            <Link
-                                :href="route('documents.show', d.id)"
-                                class="font-medium text-brand-700 hover:underline"
-                            >
-                                {{ d.title }}
-                            </Link>
-                            <span
-                                v-if="d.frozen"
-                                class="ml-1 rounded bg-surface-200 px-1 text-xs"
-                            >frozen</span>
-                            <span
-                                v-if="d.legal_hold"
-                                class="ml-1 rounded bg-red-100 px-1 text-xs text-red-700"
-                            >legal hold</span>
-                            <span
-                                v-if="d.archived"
-                                class="ml-1 rounded bg-surface-200 px-1 text-xs"
-                            >archived</span>
-                        </td>
-                        <td class="px-3 py-2 text-surface-600">
-                            {{ d.file_name }} · {{ formatBytes(d.size_bytes) }}
-                        </td>
-                        <td class="px-3 py-2">
-                            {{ d.classification }}
-                        </td>
-                        <td class="px-3 py-2">
-                            v{{ d.version }}
-                        </td>
-                        <td class="px-3 py-2 text-xs text-surface-600">
-                            {{ d.links.join(', ') || '—' }}
-                        </td>
-                        <td class="px-3 py-2">
-                            {{ d.owner }}
-                        </td>
-                        <td class="px-3 py-2 text-xs">
-                            {{ d.uploaded_at.slice(0, 10) }}
-                        </td>
-                        <td class="px-3 py-2 text-right">
-                            <a
-                                :href="route('documents.download', d.id)"
-                                class="text-brand-700 hover:underline"
-                            >Download</a>
-                        </td>
-                    </tr>
-                    <tr v-if="documents.data.length === 0">
-                        <td
-                            colspan="8"
-                            class="px-3 py-6 text-center text-surface-400"
-                        >
-                            No documents you can access match.
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <nav
-            class="mt-3 flex flex-wrap gap-1 text-sm"
-            aria-label="Pagination"
+        <DataTable
+            :columns="columns"
+            :rows="documents.data"
+            :pagination="toPagination(documents)"
+            :sort="table.sort.value"
+            :loading="table.loading.value"
+            :export-url="can.export ? route('documents.reports.inventory.export') : null"
+            prefs-key="documents.index"
+            caption="Documents"
+            empty-text="No documents you can access match these filters."
+            @sort="table.onSort"
+            @page="table.onPage"
+            @per-page="table.onPerPage"
         >
-            <template
-                v-for="l in documents.links"
-                :key="l.label"
-            >
+            <template #cell-title="{ row }">
                 <Link
-                    v-if="l.url"
-                    :href="l.url"
-                    class="rounded border px-2 py-1"
-                    :class="l.active ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-surface-200'"
+                    :href="route('documents.show', row.id)"
+                    class="inline-block min-w-40 font-medium text-brand-700 hover:underline"
                 >
-                    {{ label(l.label) }}
+                    {{ row.title }}
                 </Link>
+                <span class="ml-1 inline-flex gap-1 align-middle">
+                    <StatusChip
+                        v-if="row.frozen"
+                        status="frozen"
+                    />
+                    <StatusChip
+                        v-if="row.legal_hold"
+                        status="legal_hold"
+                    />
+                    <StatusChip
+                        v-if="row.archived"
+                        status="archived"
+                    />
+                </span>
             </template>
-        </nav>
+            <template #cell-file_name="{ row }">
+                <span class="text-surface-600">{{ row.file_name }}</span> <span class="text-xs text-surface-400">{{ formatBytes(row.size_bytes) }}</span>
+            </template>
+            <template #cell-classification="{ row }">
+                <StatusChip :status="row.classification" />
+            </template>
+            <template #cell-version="{ row }">
+                v{{ row.version }}
+            </template>
+            <template #cell-links="{ row }">
+                <span class="text-xs text-surface-600">{{ row.links.join(', ') || '—' }}</span>
+            </template>
+            <template #cell-uploaded_at="{ row }">
+                <span class="whitespace-nowrap">{{ row.uploaded_at.slice(0, 10) }}</span>
+            </template>
+            <template #actions="{ row }">
+                <a
+                    :href="route('documents.download', row.id)"
+                    class="text-sm font-medium text-brand-700 hover:underline"
+                >Download</a>
+            </template>
+        </DataTable>
 
-        <section
-            v-if="can.create"
-            class="mt-8 max-w-2xl rounded-lg border border-surface-200 bg-white p-4"
+        <Modal
+            :open="uploadOpen"
+            title="Upload a document"
+            size="lg"
+            @close="uploadOpen = false"
         >
-            <h2 class="mb-3 font-semibold">
-                Upload a document
-            </h2>
             <form
-                class="grid grid-cols-1 gap-3 md:grid-cols-2"
+                id="upload-form"
+                class="grid grid-cols-1 gap-4 md:grid-cols-2"
                 @submit.prevent="submit"
             >
-                <FormField
-                    id="file"
-                    label="File (pdf, jpg, png, xlsx, docx, csv)"
-                    :error="upload.errors.file"
-                    class="md:col-span-2"
-                >
-                    <input
-                        id="file"
-                        type="file"
-                        required
-                        accept=".pdf,.jpg,.jpeg,.png,.xlsx,.docx,.csv"
-                        class="w-full text-sm"
-                        @input="upload.file = ($event.target as HTMLInputElement).files?.[0] ?? null"
-                    >
-                </FormField>
+                <div class="md:col-span-2">
+                    <FileDropzone
+                        v-model="upload.file"
+                        :error="upload.errors.file"
+                    />
+                </div>
                 <FormField
                     id="title"
                     label="Title (optional)"
@@ -265,6 +264,7 @@ function submit() {
                 <FormField
                     id="retention_rule"
                     label="Retention"
+                    :error="upload.errors.retention_rule"
                 >
                     <select
                         id="retention_rule"
@@ -272,7 +272,7 @@ function submit() {
                         class="w-full rounded-md border border-surface-300 px-3 py-2"
                     >
                         <option value="">
-                            default
+                            Default (7 years)
                         </option>
                         <option
                             v-for="r in retentionRules"
@@ -281,54 +281,28 @@ function submit() {
                         >
                             {{ r.name }}
                         </option>
-                    </select>
-                </FormField>
-                <FormField
-                    id="entity_type"
-                    label="Link to (optional)"
-                    :error="upload.errors.entity_type"
-                >
-                    <select
-                        id="entity_type"
-                        v-model="upload.entity_type"
-                        class="w-full rounded-md border border-surface-300 px-3 py-2"
-                    >
-                        <option value="">
-                            not linked
-                        </option>
-                        <option
-                            v-for="t in entityTypes"
-                            :key="t.type"
-                            :value="t.type"
-                        >
-                            {{ t.label }}
+                        <option value="none">
+                            No retention period
                         </option>
                     </select>
                 </FormField>
-                <template v-if="upload.entity_type">
-                    <FormField
-                        id="entity_id"
-                        label="Record id"
-                        :error="upload.errors.entity_id"
+                <div>
+                    <p class="mb-1 text-sm font-medium">
+                        Link to a record (optional)
+                    </p>
+                    <div
+                        v-if="linked"
+                        class="flex flex-wrap items-center gap-2"
                     >
-                        <input
-                            id="entity_id"
-                            v-model="upload.entity_id"
-                            inputmode="numeric"
-                            required
-                            class="w-full rounded-md border border-surface-300 px-3 py-2"
-                        >
-                    </FormField>
-                    <FormField
-                        id="link_type"
-                        label="Link type"
-                        :error="upload.errors.link_type"
-                    >
+                        <StatusChip
+                            status="info"
+                            tone="brand"
+                            :label="linked.item.label"
+                        />
                         <select
-                            id="link_type"
                             v-model="upload.link_type"
-                            required
-                            class="w-full rounded-md border border-surface-300 px-3 py-2"
+                            aria-label="Link type"
+                            class="rounded-md border border-surface-300 px-2 py-1.5 text-sm"
                         >
                             <option
                                 v-for="lt in linkTypes"
@@ -337,16 +311,57 @@ function submit() {
                                 {{ lt }}
                             </option>
                         </select>
-                    </FormField>
-                </template>
-                <button
+                        <button
+                            type="button"
+                            class="text-sm text-surface-500 hover:underline"
+                            @click="clearLink"
+                        >
+                            Remove
+                        </button>
+                    </div>
+                    <Button
+                        v-else
+                        variant="secondary"
+                        @click="openPicker"
+                    >
+                        Choose record…
+                    </Button>
+                    <p
+                        v-if="upload.errors.entity_id || upload.errors.entity_type"
+                        class="mt-1 text-sm text-red-600"
+                    >
+                        {{ upload.errors.entity_id ?? upload.errors.entity_type }}
+                    </p>
+                </div>
+            </form>
+            <template #footer>
+                <Button
+                    variant="secondary"
+                    @click="uploadOpen = false"
+                >
+                    Cancel
+                </Button>
+                <Button
                     type="submit"
+                    form="upload-form"
                     :disabled="upload.processing || !upload.file"
-                    class="rounded-md bg-brand-600 px-4 py-2 text-white hover:bg-brand-700 disabled:opacity-50 md:col-span-2"
                 >
                     Upload
-                </button>
-            </form>
-        </section>
+                </Button>
+            </template>
+        </Modal>
+
+        <PickerModal
+            v-model:active-tab="pickerTab"
+            :open="pickerOpen"
+            title="Link to a record"
+            :tabs="entityTypes.map((t) => ({ key: t.type, label: t.label }))"
+            :items="picker.items.value"
+            :loading="picker.loading.value"
+            confirm-label="Link"
+            @search="(q, tab) => picker.search(tab, q)"
+            @select="onPicked"
+            @close="pickerOpen = false"
+        />
     </AppLayout>
 </template>

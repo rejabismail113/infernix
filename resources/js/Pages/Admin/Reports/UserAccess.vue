@@ -1,44 +1,55 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { Link } from '@inertiajs/vue3';
+import StatusChip from '@/Components/StatusChip.vue';
+import DataTable from '@/Components/Table/DataTable.vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import type { TableColumn } from '@/types/table';
 
 interface Row { id: number; name: string; email: string; roles: string[]; active: boolean; mfa_enabled: boolean; last_login_at: string | null; access_from: string | null; access_until: string | null; permissions: { resource: string; action: string; record_scope: string }[] }
 defineProps<{ rows: Row[]; can: { export: boolean } }>();
+const columns: TableColumn[] = [
+    { key: 'name', label: 'User', sortable: true, hideable: false }, { key: 'roles', label: 'Roles' }, { key: 'active', label: 'Status' },
+    { key: 'mfa_enabled', label: 'MFA' }, { key: 'last_login_at', label: 'Last login', sortable: true }, { key: 'permissions', label: 'Effective permissions' },
+];
 </script>
 
 <template>
-    <AppLayout>
-        <Head title="User access report" />
-        <template #header>
-            <h1 class="text-lg font-semibold">
-                User access report
-            </h1>
+    <AppLayout
+        title="User access report"
+        :breadcrumbs="[{ label: 'Administration' }, { label: 'Access reports' }, { label: 'User access' }]"
+    >
+        <template #actions>
+            <Link
+                :href="route('admin.reports.policy-history')"
+                class="text-sm font-medium text-brand-700 hover:underline"
+            >
+                Policy history →
+            </Link>
         </template>
-        <a
-            v-if="can.export"
-            :href="route('admin.reports.user-access.export')"
-            class="mb-4 inline-block rounded-md border border-surface-300 px-3 py-2 text-sm hover:bg-surface-100"
-        >Export CSV (audited)</a>
-        <div
-            v-for="r in rows"
-            :key="r.id"
-            class="mb-3 rounded-lg border border-surface-200 bg-white p-3 text-sm"
+        <DataTable
+            :columns="columns"
+            :rows="rows"
+            :export-url="can.export ? route('admin.reports.user-access.export') : null"
+            prefs-key="admin.user-access"
         >
-            <div class="font-semibold">
-                {{ r.name }} <span class="font-normal text-surface-500">{{ r.email }}</span>
-                <span class="ml-2 text-xs">{{ r.roles.join(', ') }} · {{ r.active ? 'active' : 'deactivated' }} · MFA {{ r.mfa_enabled ? 'on' : 'off' }} · last login {{ r.last_login_at ?? 'never' }}</span>
-                <span
-                    v-if="r.access_until"
-                    class="ml-2 text-xs"
-                >window {{ r.access_from?.slice(0, 10) }}→{{ r.access_until.slice(0, 10) }}</span>
-            </div>
-            <p class="mt-1 font-mono text-xs text-surface-600">
-                <span
-                    v-for="p in r.permissions"
-                    :key="p.resource + p.action"
-                    class="mr-2"
-                >{{ p.resource }}.{{ p.action }}={{ p.record_scope }}</span>
-            </p>
-        </div>
+            <template #cell-name="{ row }">
+                <span class="font-medium">{{ row.name }}</span> <span class="block text-xs text-surface-500">{{ row.email }}</span>
+            </template>
+            <template #cell-active="{ row }">
+                <StatusChip :status="row.active ? 'active' : 'deactivated'" />
+            </template>
+            <template #cell-mfa_enabled="{ row }">
+                {{ row.mfa_enabled ? 'On' : 'Off' }}
+            </template>
+            <template #cell-permissions="{ row }">
+                <p class="max-w-xl font-mono text-xs text-surface-600">
+                    <span
+                        v-for="p in row.permissions"
+                        :key="p.resource + p.action"
+                        class="mr-2 inline-block"
+                    >{{ p.resource }}.{{ p.action }}={{ p.record_scope }}</span>
+                </p>
+            </template>
+        </DataTable>
     </AppLayout>
 </template>

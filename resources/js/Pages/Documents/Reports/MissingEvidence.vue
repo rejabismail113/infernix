@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import Card from '@/Components/Card.vue';
+import EmptyState from '@/Components/Feedback/EmptyState.vue';
+import StatusChip from '@/Components/StatusChip.vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import ReportNav from './Nav.vue';
 
@@ -8,40 +10,46 @@ defineProps<{ rows: Row[] }>();
 </script>
 
 <template>
-    <AppLayout>
-        <Head title="Missing required evidence" />
-        <template #header>
-            <h1 class="text-lg font-semibold">
-                Missing required evidence
-            </h1>
-        </template>
+    <AppLayout
+        title="Missing required evidence"
+        :breadcrumbs="[{ label: 'Documents', href: route('documents.index') }, { label: 'Reports' }, { label: 'Missing evidence' }]"
+    >
         <ReportNav />
-        <div
+        <Card
             v-for="r in rows"
             :key="r.rule_id"
-            class="mb-3 rounded-lg border border-surface-200 bg-white p-3 text-sm"
+            :title="r.description"
+            :description="`${r.entity_type} needs a “${r.link_type}” document`"
         >
-            <div class="font-semibold">
-                {{ r.description }}
-                <span
-                    class="ml-2 rounded px-2 py-0.5 text-xs font-normal"
-                    :class="r.status === 'complete' ? 'bg-green-100 text-green-800' : r.status === 'missing' ? 'bg-red-100 text-red-800' : 'bg-surface-100 text-surface-500'"
-                >{{ r.status === 'pending_module' ? 'module not installed yet' : r.status }}</span>
-            </div>
-            <p class="text-xs text-surface-500">
-                {{ r.entity_type }} → needs a "{{ r.link_type }}" document
-            </p>
+            <template #actions>
+                <StatusChip
+                    :status="r.status === 'pending_module' ? 'draft' : r.status"
+                    :label="r.status === 'pending_module' ? 'Module not installed yet' : undefined"
+                />
+            </template>
             <ul
                 v-if="r.missing.length"
-                class="mt-1 list-inside list-disc"
+                class="divide-y divide-surface-100 text-sm"
             >
                 <li
                     v-for="m in r.missing"
                     :key="m.entity_id"
+                    class="py-1.5"
                 >
-                    {{ m.label }} (#{{ m.entity_id }})
+                    {{ m.label }} <span class="text-surface-400">#{{ m.entity_id }}</span>
                 </li>
             </ul>
-        </div>
+            <p
+                v-else
+                class="text-sm text-surface-500"
+            >
+                {{ r.status === 'pending_module' ? 'This rule applies once the module that owns these records is installed.' : 'Nothing missing among the records you can see.' }}
+            </p>
+        </Card>
+        <EmptyState
+            v-if="rows.length === 0"
+            title="No evidence rules"
+            message="Add required-evidence rules to track missing documents."
+        />
     </AppLayout>
 </template>

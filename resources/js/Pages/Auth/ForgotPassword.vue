@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import Flash from '@/Components/Flash.vue';
+import Flash from '@/Components/Feedback/FlashBanner.vue';
 import FormField from '@/Components/FormField.vue';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 

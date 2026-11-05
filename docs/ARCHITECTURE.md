@@ -128,8 +128,12 @@ The kernel is the only code every module may depend on. It never depends on a mo
 ```
 resources/js/
   app.ts                  Inertia + PrimeVue (Infernix preset) + Ziggy
-  Layouts/                AppLayout (sidebar, breadcrumb, header), GuestLayout
-  Components/             DataTable, StatusChip, PickerModal, Stepper, MoneyInput, FileDropzone, … (Prompt 1c)
+  Layouts/                AppLayout (props: title, breadcrumbs, status; slots: actions, chips), GuestLayout
+  Pages/Errors/Show.vue   403/404/429/500/503 page
+  Components/             Table/DataTable (server/client mode, Columns/Density/Export), StatusChip, PickerModal,
+                          Modal, Stepper, Form/MoneyInput, Form/FileDropzone, Feedback/{ToastHost,EmptyState,
+                          ErrorState,Skeleton,FlashBanner}, Shell/{Sidebar,Breadcrumbs,PageHeader}, Card, Button, Icon
+  composables/            useServerTable (DataTable ↔ Inertia query params), useLinkPicker, useToasts
   Pages/<Module>/         one folder per module (Finance/, Projects/, Documents/, Admin/, …)
   lib/                    money.ts (decimal strings / minor units only), http, formatting
   types/                  shared Inertia prop types

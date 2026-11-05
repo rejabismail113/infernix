@@ -1,10 +1,17 @@
 <script setup lang="ts">
-import { Head, router, useForm } from '@inertiajs/vue3';
-import { computed } from 'vue';
-import FormField from '@/Components/FormField.vue';
+import { router, useForm } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
+import Button from '@/Components/Button.vue';
+import Card from '@/Components/Card.vue';
+import FileDropzone from '@/Components/Form/FileDropzone.vue';
+import PickerModal, { type PickerItem } from '@/Components/PickerModal.vue';
+import StatusChip from '@/Components/StatusChip.vue';
+import DataTable from '@/Components/Table/DataTable.vue';
+import { useLinkPicker } from '@/composables/useLinkPicker';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { formatBytes } from '@/lib/format';
 import type { DocumentRow, EntityTypeOption } from '@/types/documents';
+import type { TableColumn } from '@/types/table';
 
 interface Version { id: number; version_no: number; file_name: string; mime_type: string; size_bytes: number; content_hash: string; scan_status: string; uploaded_by: string; created_at: string }
 interface LinkRow { id: number; entity_type: string; entity_id: number; link_type: string; required_evidence: boolean; label: string }
@@ -19,265 +26,305 @@ const props = defineProps<{
     can: { edit: boolean; delete: boolean; legalHold: boolean };
 }>();
 
-const version = useForm<{ file: File | null }>({ file: null });
-const link = useForm({ entity_type: '', entity_id: '', link_type: '', required_evidence: false });
+const versionForm = useForm<{ file: File | null }>({ file: null });
 const share = useForm({ user_id: '', expires_at: '', reason: '' });
 const del = useForm({ reason: '' });
-const linkTypes = computed(() => props.entityTypes.find((t) => t.type === link.entity_type)?.link_types ?? []);
+const linkForm = useForm({ entity_type: '', entity_id: '', link_type: '', required_evidence: false });
+const pickerOpen = ref(false);
+const pickerTab = ref<string | null>(props.entityTypes[0]?.type ?? null);
+const picker = useLinkPicker();
+const pending = ref<{ type: string; item: PickerItem } | null>(null);
+const pendingLinkTypes = computed(() => props.entityTypes.find((t) => t.type === pending.value?.type)?.link_types ?? []);
 
-function archive(restore: boolean) {
-    router.post(route('documents.archive', props.document.id), { restore });
+const versionColumns: TableColumn[] = [
+    { key: 'version_no', label: 'Ver.', numeric: true, sortable: true, hideable: false }, { key: 'file_name', label: 'File' },
+    { key: 'size_bytes', label: 'Size', numeric: true, sortable: true }, { key: 'content_hash', label: 'SHA-256' },
+    { key: 'scan_status', label: 'Scan' }, { key: 'uploaded_by', label: 'Uploaded by' }, { key: 'created_at', label: 'When', sortable: true },
+];
+
+function onPicked(item: PickerItem, tab: string | null) {
+    if (!tab) return;
+    pending.value = { type: tab, item };
+    linkForm.entity_type = tab;
+    linkForm.entity_id = String(item.id);
+    linkForm.link_type = props.entityTypes.find((t) => t.type === tab)?.link_types[0] ?? '';
 }
-function hold(on: boolean) {
+function saveLink() {
+    linkForm.post(route('documents.links.store', props.document.id), { preserveScroll: true, onSuccess: () => { pending.value = null; linkForm.reset(); } });
+}
+function uploadVersion() {
+    versionForm.post(route('documents.versions.store', props.document.id), { forceFormData: true, preserveScroll: true, onSuccess: () => versionForm.reset() });
+}
+function archive() {
+    router.post(route('documents.archive', props.document.id), { restore: props.document.archived }, { preserveScroll: true });
+}
+function hold() {
+    const on = !props.document.legal_hold;
     const reason = window.prompt(on ? 'Reason for legal hold (audited)' : 'Reason for releasing legal hold (audited)');
-    if (reason) router.post(route('documents.legal-hold', props.document.id), { hold: on, reason });
+    if (reason) router.post(route('documents.legal-hold', props.document.id), { hold: on, reason }, { preserveScroll: true });
 }
 function destroy() {
-    if (window.confirm('Permanently delete this document? Stored files are removed; this cannot be undone.')) {
-        del.delete(route('documents.destroy', props.document.id));
-    }
+    if (window.confirm('Permanently delete this document? Stored files are removed; this cannot be undone.')) del.delete(route('documents.destroy', props.document.id));
 }
 </script>
 
 <template>
-    <AppLayout>
-        <Head :title="document.title" />
-        <template #header>
-            <h1 class="text-lg font-semibold">
-                {{ document.title }}
-                <span class="ml-2 rounded bg-surface-100 px-2 py-0.5 text-xs font-normal">{{ document.classification }}</span>
-                <span
-                    v-if="document.frozen"
-                    class="ml-1 rounded bg-surface-200 px-2 py-0.5 text-xs font-normal"
-                >frozen</span>
-                <span
-                    v-if="document.legal_hold"
-                    class="ml-1 rounded bg-red-100 px-2 py-0.5 text-xs font-normal text-red-700"
-                >legal hold</span>
-                <span
-                    v-if="document.archived"
-                    class="ml-1 rounded bg-surface-200 px-2 py-0.5 text-xs font-normal"
-                >archived</span>
-            </h1>
+    <AppLayout
+        :title="document.title"
+        :status="document.classification"
+        :breadcrumbs="[{ label: 'Documents', href: route('documents.index') }, { label: document.title }]"
+    >
+        <template #chips>
+            <StatusChip
+                v-if="document.frozen"
+                status="frozen"
+            />
+            <StatusChip
+                v-if="document.legal_hold"
+                status="legal_hold"
+            />
+            <StatusChip
+                v-if="document.archived"
+                status="archived"
+            />
+        </template>
+        <template #actions>
+            <a
+                :href="route('documents.download', document.id)"
+                class="inline-flex items-center rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+            >Download v{{ document.version }}</a>
+            <Button
+                v-if="can.edit"
+                variant="secondary"
+                @click="archive"
+            >
+                {{ document.archived ? 'Restore' : 'Archive' }}
+            </Button>
+            <Button
+                v-if="can.legalHold"
+                variant="secondary"
+                @click="hold"
+            >
+                {{ document.legal_hold ? 'Release hold' : 'Legal hold' }}
+            </Button>
         </template>
 
-        <dl class="mb-6 grid max-w-2xl grid-cols-2 gap-2 rounded-lg border border-surface-200 bg-white p-4 text-sm">
-            <dt class="text-surface-500">
-                Owner
-            </dt><dd>{{ document.owner }}</dd>
-            <dt class="text-surface-500">
-                Current version
-            </dt><dd>v{{ document.version }} · {{ document.file_name }}</dd>
-            <dt class="text-surface-500">
-                Retention
-            </dt><dd>{{ document.retention ?? '—' }}<span v-if="document.retention_until"> (until {{ document.retention_until }})</span></dd>
-            <dt class="text-surface-500">
-                Tags
-            </dt><dd>{{ document.tags.join(', ') || '—' }}</dd>
-            <dt
-                v-if="document.legal_hold"
-                class="text-surface-500"
+        <div class="grid gap-5 xl:grid-cols-3">
+            <Card
+                title="Details"
+                class="xl:col-span-1"
             >
-                Legal hold
-            </dt><dd v-if="document.legal_hold">
-                {{ document.legal_hold_reason }}
-            </dd>
-        </dl>
+                <dl class="grid grid-cols-3 gap-y-2 text-sm">
+                    <dt class="text-surface-500">
+                        Owner
+                    </dt><dd class="col-span-2">
+                        {{ document.owner }}
+                    </dd>
+                    <dt class="text-surface-500">
+                        File
+                    </dt><dd class="col-span-2">
+                        {{ document.file_name }} · {{ formatBytes(document.size_bytes) }}
+                    </dd>
+                    <dt class="text-surface-500">
+                        Retention
+                    </dt><dd class="col-span-2">
+                        {{ document.retention ?? 'None' }}<span
+                            v-if="document.retention_until"
+                            class="text-surface-500"
+                        > · until {{ document.retention_until }}</span>
+                    </dd>
+                    <dt class="text-surface-500">
+                        Tags
+                    </dt><dd class="col-span-2">
+                        {{ document.tags.join(', ') || '—' }}
+                    </dd>
+                    <template v-if="document.legal_hold">
+                        <dt class="text-surface-500">
+                            Hold reason
+                        </dt><dd class="col-span-2">
+                            {{ document.legal_hold_reason }}
+                        </dd>
+                    </template>
+                </dl>
+            </Card>
 
-        <h2 class="mb-2 font-semibold">
-            Versions
-        </h2>
-        <div class="mb-6 overflow-x-auto rounded-lg border border-surface-200 bg-white">
-            <table class="min-w-full text-sm">
-                <thead class="bg-surface-100 text-left text-xs uppercase text-surface-500">
-                    <tr>
-                        <th class="px-3 py-2">
-                            Ver.
-                        </th><th class="px-3 py-2">
-                            File
-                        </th><th class="px-3 py-2">
-                            Size
-                        </th><th class="px-3 py-2">
-                            SHA-256
-                        </th><th class="px-3 py-2">
-                            Scan
-                        </th><th class="px-3 py-2">
-                            Uploaded
-                        </th><th class="px-3 py-2" />
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr
-                        v-for="v in versions"
-                        :key="v.id"
-                        class="border-t border-surface-100"
+            <Card
+                title="Linked records"
+                class="xl:col-span-2"
+            >
+                <template #actions>
+                    <Button
+                        v-if="can.edit"
+                        variant="secondary"
+                        @click="pickerOpen = true; picker.search(pickerTab, '')"
                     >
-                        <td class="px-3 py-2">
-                            v{{ v.version_no }}
-                        </td>
-                        <td class="px-3 py-2">
-                            {{ v.file_name }} <span class="text-xs text-surface-400">{{ v.mime_type }}</span>
-                        </td>
-                        <td class="px-3 py-2">
-                            {{ formatBytes(v.size_bytes) }}
-                        </td>
-                        <td class="px-3 py-2 font-mono text-xs">
-                            {{ v.content_hash.slice(0, 16) }}…
-                        </td>
-                        <td class="px-3 py-2 text-xs">
-                            {{ v.scan_status }}
-                        </td>
-                        <td class="px-3 py-2 text-xs">
-                            {{ v.uploaded_by }} · {{ v.created_at.slice(0, 16).replace('T', ' ') }}
-                        </td>
-                        <td class="px-3 py-2 text-right">
-                            <a
-                                :href="route('documents.download', { document: document.id, version: v.version_no })"
-                                class="text-brand-700 hover:underline"
-                            >Download</a>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+                        Link to record…
+                    </Button>
+                </template>
+                <ul class="divide-y divide-surface-100 text-sm">
+                    <li
+                        v-for="l in links"
+                        :key="l.id"
+                        class="flex items-center justify-between py-2"
+                    >
+                        <span>{{ l.label }}</span>
+                        <span class="flex gap-1"><StatusChip
+                            :status="l.link_type"
+                            tone="neutral"
+                            :label="l.link_type.replace(/_/g, ' ')"
+                        /><StatusChip
+                            v-if="l.required_evidence"
+                            status="required"
+                            tone="brand"
+                            label="Required evidence"
+                        /></span>
+                    </li>
+                    <li
+                        v-if="links.length === 0"
+                        class="py-2 text-surface-500"
+                    >
+                        Not linked to any record.
+                    </li>
+                </ul>
+                <form
+                    v-if="pending"
+                    class="mt-3 flex flex-wrap items-center gap-2 rounded-md bg-brand-50 p-3 text-sm"
+                    @submit.prevent="saveLink"
+                >
+                    <span class="font-medium">{{ pending.item.label }}</span>
+                    <select
+                        v-model="linkForm.link_type"
+                        aria-label="Link type"
+                        class="rounded-md border border-surface-300 px-2 py-1.5"
+                    >
+                        <option
+                            v-for="lt in pendingLinkTypes"
+                            :key="lt"
+                        >
+                            {{ lt }}
+                        </option>
+                    </select>
+                    <label class="flex items-center gap-1"><input
+                        v-model="linkForm.required_evidence"
+                        type="checkbox"
+                    > required evidence</label>
+                    <Button type="submit">
+                        Save link
+                    </Button>
+                    <button
+                        type="button"
+                        class="text-surface-500 hover:underline"
+                        @click="pending = null"
+                    >
+                        Cancel
+                    </button>
+                    <p
+                        v-if="Object.keys(linkForm.errors).length"
+                        class="w-full text-red-600"
+                        role="alert"
+                    >
+                        {{ Object.values(linkForm.errors).join(' ') }}
+                    </p>
+                </form>
+            </Card>
         </div>
-        <form
-            v-if="can.edit && !document.frozen"
-            class="mb-8 flex flex-wrap items-end gap-2"
-            @submit.prevent="version.post(route('documents.versions.store', document.id), { forceFormData: true, onSuccess: () => version.reset() })"
-        >
-            <FormField
-                id="new-version"
-                label="Upload a new version"
-                :error="version.errors.file"
+
+        <Card title="Versions">
+            <DataTable
+                :columns="versionColumns"
+                :rows="versions"
+                prefs-key="documents.versions"
             >
-                <input
+                <template #cell-version_no="{ row }">
+                    v{{ row.version_no }}
+                </template>
+                <template #cell-size_bytes="{ row }">
+                    {{ formatBytes(row.size_bytes) }}
+                </template>
+                <template #cell-content_hash="{ row }">
+                    <span
+                        class="font-mono text-xs"
+                        :title="row.content_hash"
+                    >{{ row.content_hash.slice(0, 12) }}…</span>
+                </template>
+                <template #cell-scan_status="{ row }">
+                    <StatusChip :status="row.scan_status" />
+                </template>
+                <template #cell-created_at="{ row }">
+                    {{ row.created_at.slice(0, 16).replace('T', ' ') }}
+                </template>
+                <template #actions="{ row }">
+                    <a
+                        :href="route('documents.download', { document: document.id, version: row.version_no })"
+                        class="text-sm font-medium text-brand-700 hover:underline"
+                    >Download</a>
+                </template>
+            </DataTable>
+            <form
+                v-if="can.edit && !document.frozen"
+                class="mt-4 grid gap-3 md:grid-cols-[1fr_auto] md:items-end"
+                @submit.prevent="uploadVersion"
+            >
+                <FileDropzone
                     id="new-version"
-                    type="file"
-                    required
-                    class="text-sm"
-                    @input="version.file = ($event.target as HTMLInputElement).files?.[0] ?? null"
+                    v-model="versionForm.file"
+                    label="Drop a new version here or browse"
+                    :error="versionForm.errors.file"
+                />
+                <Button
+                    type="submit"
+                    :disabled="versionForm.processing || !versionForm.file"
                 >
-            </FormField>
-            <button
-                type="submit"
-                :disabled="version.processing || !version.file"
-                class="rounded-md bg-brand-600 px-4 py-2 text-white hover:bg-brand-700 disabled:opacity-50"
-            >
-                Upload version
-            </button>
-        </form>
-
-        <h2 class="mb-2 font-semibold">
-            Linked records
-        </h2>
-        <ul class="mb-3 text-sm">
-            <li
-                v-for="l in links"
-                :key="l.id"
-            >
-                {{ l.label }} · <span class="text-surface-500">{{ l.link_type }}</span><span
-                    v-if="l.required_evidence"
-                    class="ml-1 text-xs text-brand-700"
-                >required evidence</span>
-            </li>
-            <li
-                v-if="links.length === 0"
-                class="text-surface-400"
-            >
-                Not linked to any record.
-            </li>
-        </ul>
-        <form
-            v-if="can.edit"
-            class="mb-8 flex flex-wrap gap-2 text-sm"
-            @submit.prevent="link.post(route('documents.links.store', document.id), { onSuccess: () => link.reset() })"
-        >
-            <select
-                v-model="link.entity_type"
-                required
-                aria-label="Entity type"
-                class="rounded-md border border-surface-300 px-2 py-2"
-            >
-                <option
-                    value=""
-                    disabled
-                >
-                    Record type…
-                </option>
-                <option
-                    v-for="t in entityTypes"
-                    :key="t.type"
-                    :value="t.type"
-                >
-                    {{ t.label }}
-                </option>
-            </select>
-            <input
-                v-model="link.entity_id"
-                required
-                placeholder="record id"
-                aria-label="Record id"
-                inputmode="numeric"
-                class="w-28 rounded-md border border-surface-300 px-2 py-2"
-            >
-            <select
-                v-model="link.link_type"
-                required
-                aria-label="Link type"
-                class="rounded-md border border-surface-300 px-2 py-2"
-            >
-                <option
-                    v-for="lt in linkTypes"
-                    :key="lt"
-                >
-                    {{ lt }}
-                </option>
-            </select>
-            <label class="flex items-center gap-1"><input
-                v-model="link.required_evidence"
-                type="checkbox"
-            > required evidence</label>
-            <button
-                type="submit"
-                class="rounded-md border border-surface-300 px-3 py-2 hover:bg-surface-100"
-            >
-                Link
-            </button>
+                    Upload new version
+                </Button>
+            </form>
             <p
-                v-if="Object.keys(link.errors).length"
-                class="w-full text-red-600"
+                v-else-if="document.frozen"
+                class="mt-3 text-sm text-surface-500"
             >
-                {{ Object.values(link.errors).join(' ') }}
+                This document is frozen because it belongs to an issued document; it can no longer change.
             </p>
-        </form>
+        </Card>
 
-        <template v-if="can.edit">
-            <h2 class="mb-2 font-semibold">
-                Explicit shares
-            </h2>
-            <ul class="mb-3 text-sm">
+        <Card
+            v-if="can.edit"
+            title="Explicit shares"
+            description="View-only access for specific people, optionally time-limited. Audited."
+        >
+            <ul class="mb-3 divide-y divide-surface-100 text-sm">
                 <li
                     v-for="s in shares"
                     :key="s.id"
-                    class="flex items-center gap-2"
+                    class="flex items-center justify-between py-2"
                 >
-                    {{ s.user }} <span class="text-xs text-surface-500">{{ s.expires_at ? 'until ' + s.expires_at.slice(0, 10) : 'no expiry' }}{{ s.active ? '' : ' (expired)' }} · {{ s.reason }}</span>
-                    <button
-                        class="text-xs text-red-700 hover:underline"
-                        @click="router.delete(route('documents.shares.destroy', { document: document.id, share: s.id }))"
-                    >
-                        remove
-                    </button>
+                    <span>{{ s.user }} <span class="text-xs text-surface-500">· {{ s.reason }}</span></span>
+                    <span class="flex items-center gap-2">
+                        <StatusChip
+                            :status="s.active ? 'active' : 'expired'"
+                            :label="s.expires_at ? (s.active ? 'until ' + s.expires_at.slice(0, 10) : 'expired') : 'no expiry'"
+                        />
+                        <button
+                            type="button"
+                            class="text-xs text-red-700 hover:underline"
+                            @click="router.delete(route('documents.shares.destroy', { document: document.id, share: s.id }), { preserveScroll: true })"
+                        >remove</button>
+                    </span>
+                </li>
+                <li
+                    v-if="shares.length === 0"
+                    class="py-2 text-surface-500"
+                >
+                    Not shared with anyone.
                 </li>
             </ul>
             <form
-                class="mb-8 flex flex-wrap gap-2 text-sm"
-                @submit.prevent="share.post(route('documents.shares.store', document.id), { onSuccess: () => share.reset() })"
+                class="flex flex-wrap gap-2 text-sm"
+                @submit.prevent="share.post(route('documents.shares.store', document.id), { preserveScroll: true, onSuccess: () => share.reset() })"
             >
                 <select
                     v-model="share.user_id"
                     required
-                    aria-label="User"
+                    aria-label="Share with"
                     class="rounded-md border border-surface-300 px-2 py-2"
                 >
                     <option
@@ -303,60 +350,65 @@ function destroy() {
                 <input
                     v-model="share.reason"
                     required
-                    placeholder="reason (audited)"
+                    placeholder="Reason (audited)"
                     aria-label="Reason"
-                    class="rounded-md border border-surface-300 px-2 py-2"
+                    class="min-w-56 flex-1 rounded-md border border-surface-300 px-3 py-2"
                 >
-                <button
+                <Button
                     type="submit"
-                    class="rounded-md border border-surface-300 px-3 py-2 hover:bg-surface-100"
+                    variant="secondary"
                 >
                     Share
-                </button>
+                </Button>
                 <p
                     v-if="Object.keys(share.errors).length"
                     class="w-full text-red-600"
+                    role="alert"
                 >
                     {{ Object.values(share.errors).join(' ') }}
                 </p>
             </form>
-        </template>
+        </Card>
 
-        <div class="flex flex-wrap gap-2 text-sm">
-            <button
-                v-if="can.edit"
-                class="rounded-md border border-surface-300 px-3 py-2 hover:bg-surface-100"
-                @click="archive(document.archived)"
-            >
-                {{ document.archived ? 'Restore from archive' : 'Archive' }}
-            </button>
-            <button
-                v-if="can.legalHold"
-                class="rounded-md border border-surface-300 px-3 py-2 hover:bg-surface-100"
-                @click="hold(!document.legal_hold)"
-            >
-                {{ document.legal_hold ? 'Release legal hold' : 'Apply legal hold' }}
-            </button>
-            <template v-if="can.delete">
+        <Card
+            v-if="can.delete"
+            title="Permanent deletion"
+            description="Owner only. Refused under legal hold, inside the retention period, or for issued documents."
+        >
+            <div class="flex flex-wrap gap-2">
                 <input
                     v-model="del.reason"
-                    placeholder="reason for permanent deletion"
+                    placeholder="Reason (audited)"
                     aria-label="Deletion reason"
-                    class="rounded-md border border-surface-300 px-2 py-2"
+                    class="min-w-64 flex-1 rounded-md border border-surface-300 px-3 py-2 text-sm"
                 >
-                <button
-                    class="rounded-md border border-red-300 px-3 py-2 text-red-700 hover:bg-red-50"
+                <Button
+                    variant="danger"
                     @click="destroy"
                 >
                     Delete permanently
-                </button>
-                <p
-                    v-if="del.errors.reason"
-                    class="w-full text-red-600"
-                >
-                    {{ del.errors.reason }}
-                </p>
-            </template>
-        </div>
+                </Button>
+            </div>
+            <p
+                v-if="del.errors.reason"
+                class="mt-1 text-sm text-red-600"
+                role="alert"
+            >
+                {{ del.errors.reason }}
+            </p>
+        </Card>
+
+        <PickerModal
+            v-model:active-tab="pickerTab"
+            :open="pickerOpen"
+            title="Link to a record"
+            :tabs="entityTypes.map((t) => ({ key: t.type, label: t.label }))"
+            :items="picker.items.value"
+            :loading="picker.loading.value"
+            confirm-label="Choose"
+            @search="(q, tab) => picker.search(tab, q)"
+            @select="onPicked"
+            @close="pickerOpen = false"
+        />
     </AppLayout>
 </template>

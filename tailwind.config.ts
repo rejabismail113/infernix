@@ -40,7 +40,8 @@ export default {
                     900: '#111827',
                 },
             },
-            fontFamily: { sans: ['Inter', ...defaultTheme.fontFamily.sans] },
+            // No external font CDN (offline-capable, no third-party requests); Inter is used when installed.
+            fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'Roboto', ...defaultTheme.fontFamily.sans] },
         },
     },
     plugins: [],

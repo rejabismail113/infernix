@@ -10,8 +10,11 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Routing\Middleware\ValidateSignature;
+use Inertia\Inertia;
+use Symfony\Component\HttpFoundation\Response;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -38,5 +41,19 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectUsersTo(fn () => route('dashboard'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Inertia error pages (403 page etc.) for browser requests; JSON/API and debug 500s are untouched.
+        $exceptions->respond(function (Response $response, Throwable $e, Request $request) {
+            $status = $response->getStatusCode();
+            $debugServerError = $status >= 500 && config('app.debug');
+            if ($request->expectsJson() || $debugServerError || ! in_array($status, [403, 404, 429, 500, 503], true)) {
+                return $response;
+            }
+            if ($request->routeIs('documents.stream') && $status !== 403 && $status !== 404) {
+                return $response;
+            }
+
+            return Inertia::render('Errors/Show', ['status' => $status])
+                ->toResponse($request)
+                ->setStatusCode($status);
+        });
     })->create();

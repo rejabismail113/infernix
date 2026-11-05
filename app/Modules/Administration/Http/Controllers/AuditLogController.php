@@ -27,7 +27,7 @@ final class AuditLogController
     {
         $this->authorize('viewAny', AuditEvent::class);
         $filters = $this->filters($request);
-        $events = $this->query($filters)->with('actor:id,name')->paginate(50)->withQueryString()
+        $events = $this->query($filters)->with('actor:id,name')->paginate($this->perPage($request))->withQueryString()
             ->through(fn (AuditEvent $e): array => $this->present($e));
 
         return Inertia::render('Admin/AuditLog/Index', [
@@ -61,6 +61,10 @@ final class AuditLogController
             'entity_id' => ['nullable', 'integer'],
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date'],
+            'sort' => ['nullable', 'in:occurred_at,action,entity_type,actor_id'],
+            'dir' => ['nullable', 'in:asc,desc'],
+            'per_page' => ['nullable', 'integer', 'in:10,25,50,100'],
+            'page' => ['nullable', 'integer', 'min:1'],
         ]);
 
         return $f;
@@ -72,13 +76,23 @@ final class AuditLogController
      */
     private function query(array $f): Builder
     {
-        return AuditEvent::query()->orderByDesc('id')
+        $sort = $f['sort'] ?? 'occurred_at';
+        $dir = ($f['dir'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
+
+        return AuditEvent::query()->orderBy($sort, $dir)->orderBy('id', $dir)
             ->when($f['actor_id'] ?? null, fn (Builder $q, $v) => $q->where('actor_id', $v))
             ->when($f['action'] ?? null, fn (Builder $q, $v) => $q->where('action', $v))
             ->when($f['entity_type'] ?? null, fn (Builder $q, $v) => $q->where('entity_type', 'like', '%'.$v.'%'))
             ->when($f['entity_id'] ?? null, fn (Builder $q, $v) => $q->where('entity_id', $v))
             ->when($f['from'] ?? null, fn (Builder $q, $v) => $q->where('occurred_at', '>=', $v))
             ->when($f['to'] ?? null, fn (Builder $q, $v) => $q->where('occurred_at', '<', Carbon::parse($v)->addDay()));
+    }
+
+    private function perPage(Request $request): int
+    {
+        $n = $request->integer('per_page', 25);
+
+        return in_array($n, [10, 25, 50, 100], true) ? $n : 25;
     }
 
     /** @return array<string, mixed> */

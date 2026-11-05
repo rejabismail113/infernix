@@ -78,6 +78,16 @@ deviations are `D-0x`.
 | A-17 | Freezing | Linking with `issued_document` (used by M03 in Prompt 3) or calling `DocumentStore::freeze()` freezes a document; a DB trigger then refuses new versions. |
 | A-18 | Evidence rules for future modules | Seeded now (claim lines, expenses, bills, assets) and shown as "module not installed yet" until those modules register their entity types. |
 
+## Prompt 1c assumptions (UI shell)
+
+| ID | Gap | Assumption |
+|---|---|---|
+| A-19 | Reference images | `docs/reference/*.jpg` were shared in chat, not as files. The shell follows the layout described in `docs/reference/README.md` (sidebar with icons and orange active item, breadcrumb, title + status chip, Columns / Density / Export grid toolbar, tabbed picker modal, stepper). The logo stays a PLACEHOLDER SVG until the real file is added. |
+| A-20 | Component library | Shared grid, picker, modal, stepper and inputs are small in-house Vue components on Tailwind (fully keyboard-tested), rather than PrimeVue widgets, so the reference look and the money rules are under our control. PrimeVue remains installed for later complex widgets (e.g. date range, charts). |
+| A-21 | Fonts | No external font CDN: the system font stack is used (Inter when installed locally). Avoids third-party requests from an internal finance system and works offline. |
+| A-22 | Table preferences | Column visibility and density are remembered per table in the viewer's browser (`localStorage`) — a convenience only; sorting, filtering and paging are always done by the server for paged lists. |
+| A-23 | Error pages | Browser requests get an Inertia error page (403, 404, 429, 500/503 when debug is off) with the original status code; JSON clients keep JSON errors. |
+
 ## Pending legal review (PDPA 2010 / Amendment 2024)
 
 Places where personal data is stored, with the retention/consent default assumed. All are flagged for

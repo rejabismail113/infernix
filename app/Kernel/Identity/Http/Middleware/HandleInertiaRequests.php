@@ -13,28 +13,28 @@ final class HandleInertiaRequests extends Middleware
 {
     protected $rootView = 'app';
 
-    /** @return list<array{label: string, href: string, group: string}> */
+    /** @return list<array{label: string, href: string, group: string, icon: string}> */
     private function nav(User $user): array
     {
         $p = app(PermissionService::class);
         $items = [
-            ['Documents', 'documents.index', 'documents', 'view', 'Documents'],
-            ['Document reports', 'documents.reports.inventory', 'documents', 'view', 'Documents'],
-            ['Users', 'admin.users.index', 'users', 'view', 'Administration'],
-            ['Permissions', 'admin.permissions.index', 'permissions', 'view', 'Administration'],
-            ['Delegations', 'admin.delegations.index', 'delegations', 'view', 'Administration'],
-            ['Company', 'admin.company.edit', 'company', 'view', 'Administration'],
-            ['Fiscal periods', 'admin.fiscal-periods.index', 'fiscal_periods', 'view', 'Administration'],
-            ['Numbering', 'admin.numbering.index', 'numbering', 'view', 'Administration'],
-            ['Dictionaries', 'admin.dictionaries.index', 'dictionaries', 'view', 'Administration'],
-            ['Notification rules', 'admin.notification-rules.index', 'notification_rules', 'view', 'Administration'],
-            ['Audit log', 'admin.audit-log.index', 'audit_log', 'view', 'Administration'],
-            ['Access reports', 'admin.reports.user-access', 'reports_access', 'view', 'Administration'],
+            ['Documents', 'documents.index', 'documents', 'view', 'Documents', 'document'],
+            ['Document reports', 'documents.reports.inventory', 'documents', 'view', 'Documents', 'report'],
+            ['Users', 'admin.users.index', 'users', 'view', 'Administration', 'users'],
+            ['Permissions', 'admin.permissions.index', 'permissions', 'view', 'Administration', 'shield'],
+            ['Delegations', 'admin.delegations.index', 'delegations', 'view', 'Administration', 'swap'],
+            ['Company', 'admin.company.edit', 'company', 'view', 'Administration', 'building'],
+            ['Fiscal periods', 'admin.fiscal-periods.index', 'fiscal_periods', 'view', 'Administration', 'calendar'],
+            ['Numbering', 'admin.numbering.index', 'numbering', 'view', 'Administration', 'hash'],
+            ['Dictionaries', 'admin.dictionaries.index', 'dictionaries', 'view', 'Administration', 'list'],
+            ['Notification rules', 'admin.notification-rules.index', 'notification_rules', 'view', 'Administration', 'bell'],
+            ['Audit log', 'admin.audit-log.index', 'audit_log', 'view', 'Administration', 'audit'],
+            ['Access reports', 'admin.reports.user-access', 'reports_access', 'view', 'Administration', 'report'],
         ];
-        $nav = [];
-        foreach ($items as [$label, $routeName, $resource, $action, $group]) {
+        $nav = [['label' => 'Dashboard', 'href' => route('dashboard'), 'group' => 'Overview', 'icon' => 'home']];
+        foreach ($items as [$label, $routeName, $resource, $action, $group, $icon]) {
             if ($p->can($user, $action, $resource)) {
-                $nav[] = ['label' => $label, 'href' => route($routeName), 'group' => $group];
+                $nav[] = ['label' => $label, 'href' => route($routeName), 'group' => $group, 'icon' => $icon];
             }
         }
 

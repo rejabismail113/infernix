@@ -1,151 +1,191 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
-import SimpleTable from '@/Components/SimpleTable.vue';
+import { useForm } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
+import Button from '@/Components/Button.vue';
+import Card from '@/Components/Card.vue';
+import MoneyInput from '@/Components/Form/MoneyInput.vue';
+import StatusChip from '@/Components/StatusChip.vue';
+import DataTable from '@/Components/Table/DataTable.vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import type { TableColumn } from '@/types/table';
 
 interface Item { id: number; code: string; label_en: string; label_ms: string | null; effective_from: string; effective_to: string | null; notes: string | null; active: boolean }
 interface Rate { id: number; rate: string; unit: string; version: number; effective_from: string; effective_to: string | null; notes: string | null }
-defineProps<{
+const props = defineProps<{
     dictionaries: { id: number; code: string; name: string; system: boolean; items: Item[] }[];
     claimTypes: { id: number; code: string; name: string; receipt_required: boolean; is_medical: boolean; per_claim_limit: string | null; notes: string | null; rates: Rate[] }[];
     can: { edit: boolean };
 }>();
-const item = useForm({ dictionary_id: 0, code: '', label_en: '', label_ms: '', effective_from: new Date().toISOString().slice(0, 10), notes: '' });
-const rate = useForm({ claim_type_id: 0, rate: '', unit: 'km', effective_from: new Date().toISOString().slice(0, 10), notes: '' });
+
+const tabs = computed(() => [...props.dictionaries.map((d) => ({ key: String(d.id), label: d.name })), { key: 'claims', label: 'Claim types & rates' }]);
+const active = ref(tabs.value[0]?.key ?? 'claims');
+const dict = computed(() => props.dictionaries.find((d) => String(d.id) === active.value));
+const item = useForm({ code: '', label_en: '', label_ms: '', effective_from: new Date().toISOString().slice(0, 10), notes: '' });
+const rate = useForm({ rate: '' as string | number | null, unit: 'km', effective_from: new Date().toISOString().slice(0, 10), notes: '' });
+const rateFor = ref<number | null>(null);
+const itemColumns: TableColumn[] = [
+    { key: 'code', label: 'Code', sortable: true }, { key: 'label_en', label: 'Label (EN)', sortable: true }, { key: 'label_ms', label: 'Label (BM)' },
+    { key: 'effective_from', label: 'From', sortable: true }, { key: 'effective_to', label: 'To' }, { key: 'active', label: 'Status' }, { key: 'notes', label: 'Notes', hidden: true },
+];
 </script>
 
 <template>
-    <AppLayout>
-        <Head title="Dictionaries" />
-        <template #header>
-            <h1 class="text-lg font-semibold">
-                Dictionaries & claim types
-            </h1>
-        </template>
-        <details
-            v-for="d in dictionaries"
-            :key="d.id"
-            class="mb-3 rounded-lg border border-surface-200 bg-white p-3"
-        >
-            <summary class="cursor-pointer font-semibold">
-                {{ d.name }} <span class="font-mono text-xs text-surface-500">{{ d.code }}</span> · {{ d.items.length }} items
-            </summary>
-            <SimpleTable
-                class="mt-2"
-                :columns="[{ key: 'code', label: 'Code' }, { key: 'label_en', label: 'EN' }, { key: 'label_ms', label: 'BM' }, { key: 'effective_from', label: 'From' }, { key: 'effective_to', label: 'To' }, { key: 'active', label: 'Active' }, { key: 'notes', label: 'Notes' }]"
-                :rows="d.items"
-            >
-                <template #cell-active="{ row }">
-                    {{ row.active ? 'yes' : 'no' }}
-                </template>
-            </SimpleTable>
-            <form
-                v-if="can.edit"
-                class="mt-2 grid grid-cols-2 gap-2 text-sm md:grid-cols-6"
-                @submit.prevent="item.transform((d2) => ({ ...d2 })).post(route('admin.dictionaries.items.store', d.id), { onSuccess: () => item.reset() })"
-            >
-                <input
-                    v-model="item.code"
-                    required
-                    placeholder="code"
-                    aria-label="Code"
-                    class="rounded-md border border-surface-300 px-2 py-1"
-                >
-                <input
-                    v-model="item.label_en"
-                    required
-                    placeholder="label EN"
-                    aria-label="Label EN"
-                    class="rounded-md border border-surface-300 px-2 py-1"
-                >
-                <input
-                    v-model="item.label_ms"
-                    placeholder="label BM"
-                    aria-label="Label BM"
-                    class="rounded-md border border-surface-300 px-2 py-1"
-                >
-                <input
-                    v-model="item.effective_from"
-                    type="date"
-                    aria-label="Effective from"
-                    class="rounded-md border border-surface-300 px-2 py-1"
-                >
-                <input
-                    v-model="item.notes"
-                    placeholder="notes"
-                    aria-label="Notes"
-                    class="rounded-md border border-surface-300 px-2 py-1"
-                >
-                <button
-                    type="submit"
-                    class="rounded-md bg-brand-600 px-3 py-1 text-white"
-                >
-                    Add
-                </button>
-            </form>
-        </details>
-
-        <h2 class="mb-2 mt-8 font-semibold">
-            Claim types (rates are versioned)
-        </h2>
+    <AppLayout
+        title="Dictionaries"
+        :breadcrumbs="[{ label: 'Administration' }, { label: 'Dictionaries' }]"
+    >
         <div
-            v-for="c in claimTypes"
-            :key="c.id"
-            class="mb-3 rounded-lg border border-surface-200 bg-white p-3 text-sm"
+            role="tablist"
+            aria-label="Dictionaries"
+            class="flex flex-wrap gap-1 rounded-lg bg-white p-1 ring-1 ring-surface-200"
         >
-            <div class="font-semibold">
-                {{ c.name }} <span class="font-mono text-xs text-surface-500">{{ c.code }}</span>
-                <span class="ml-2 text-xs">{{ c.receipt_required ? 'receipt required' : 'no receipt' }}{{ c.is_medical ? ' · medical (clinical detail restricted)' : '' }}{{ c.per_claim_limit ? ' · limit RM ' + c.per_claim_limit : '' }}</span>
-            </div>
-            <p class="text-xs text-surface-500">
-                {{ c.notes }}
-            </p>
-            <ul class="mt-1 text-xs">
-                <li
-                    v-for="r in c.rates"
-                    :key="r.id"
-                >
-                    v{{ r.version }}: RM {{ r.rate }} / {{ r.unit }} from {{ r.effective_from }}{{ r.effective_to ? ' to ' + r.effective_to : '' }}
-                </li>
-            </ul>
-            <form
-                v-if="can.edit"
-                class="mt-2 flex flex-wrap gap-2"
-                @submit.prevent="rate.post(route('admin.claim-types.rates.store', c.id), { onSuccess: () => rate.reset() })"
+            <button
+                v-for="t in tabs"
+                :key="t.key"
+                type="button"
+                role="tab"
+                :aria-selected="active === t.key"
+                class="rounded-md px-3 py-1.5 text-sm font-medium"
+                :class="active === t.key ? 'bg-brand-50 text-brand-700' : 'text-surface-600 hover:bg-surface-100'"
+                @click="active = t.key"
             >
-                <input
-                    v-model="rate.rate"
-                    required
-                    placeholder="rate (decimal)"
-                    aria-label="Rate"
-                    inputmode="decimal"
-                    class="rounded-md border border-surface-300 px-2 py-1"
-                >
-                <select
-                    v-model="rate.unit"
-                    aria-label="Unit"
-                    class="rounded-md border border-surface-300 px-2 py-1"
-                >
-                    <option
-                        v-for="u in ['km', 'day', 'session', 'item']"
-                        :key="u"
-                    >
-                        {{ u }}
-                    </option>
-                </select>
-                <input
-                    v-model="rate.effective_from"
-                    type="date"
-                    aria-label="Effective from"
-                    class="rounded-md border border-surface-300 px-2 py-1"
-                >
-                <button
-                    type="submit"
-                    class="rounded-md bg-brand-600 px-3 py-1 text-white"
-                >
-                    New rate version
-                </button>
-            </form>
+                {{ t.label }}
+            </button>
         </div>
+
+        <template v-if="dict">
+            <DataTable
+                :columns="itemColumns"
+                :rows="dict.items"
+                :prefs-key="`admin.dictionary.${dict.code}`"
+                :caption="dict.name"
+            >
+                <template #cell-code="{ row }">
+                    <span class="font-mono text-xs">{{ row.code }}</span>
+                </template>
+                <template #cell-active="{ row }">
+                    <StatusChip :status="row.active ? 'active' : 'inactive'" />
+                </template>
+            </DataTable>
+            <Card
+                v-if="can.edit"
+                title="Add item"
+                description="Items are versioned by effective date; existing items are never renumbered."
+            >
+                <form
+                    class="grid grid-cols-1 gap-3 text-sm md:grid-cols-6"
+                    @submit.prevent="item.post(route('admin.dictionaries.items.store', dict.id), { onSuccess: () => item.reset() })"
+                >
+                    <input
+                        v-model="item.code"
+                        required
+                        placeholder="code"
+                        aria-label="Code"
+                        class="rounded-md border border-surface-300 px-3 py-2"
+                    >
+                    <input
+                        v-model="item.label_en"
+                        required
+                        placeholder="Label (EN)"
+                        aria-label="Label EN"
+                        class="rounded-md border border-surface-300 px-3 py-2"
+                    >
+                    <input
+                        v-model="item.label_ms"
+                        placeholder="Label (BM)"
+                        aria-label="Label BM"
+                        class="rounded-md border border-surface-300 px-3 py-2"
+                    >
+                    <input
+                        v-model="item.effective_from"
+                        type="date"
+                        aria-label="Effective from"
+                        class="rounded-md border border-surface-300 px-3 py-2"
+                    >
+                    <input
+                        v-model="item.notes"
+                        placeholder="notes"
+                        aria-label="Notes"
+                        class="rounded-md border border-surface-300 px-3 py-2"
+                    >
+                    <Button
+                        type="submit"
+                        :disabled="item.processing"
+                    >
+                        Add
+                    </Button>
+                    <p
+                        v-if="Object.keys(item.errors).length"
+                        class="col-span-full text-red-600"
+                        role="alert"
+                    >
+                        {{ Object.values(item.errors).join(' ') }}
+                    </p>
+                </form>
+            </Card>
+        </template>
+
+        <template v-else>
+            <Card
+                v-for="c in claimTypes"
+                :key="c.id"
+                :title="c.name"
+                :description="c.notes ?? undefined"
+            >
+                <template #actions>
+                    <StatusChip
+                        :status="c.receipt_required ? 'active' : 'draft'"
+                        :label="c.receipt_required ? 'Receipt required' : 'No receipt'"
+                    />
+                    <StatusChip
+                        v-if="c.is_medical"
+                        status="medical"
+                        label="Medical — clinical detail restricted"
+                    />
+                </template>
+                <DataTable
+                    :columns="[{ key: 'version', label: 'Version', numeric: true }, { key: 'rate', label: 'Rate (RM)', numeric: true }, { key: 'unit', label: 'Per' }, { key: 'effective_from', label: 'From' }, { key: 'effective_to', label: 'To' }]"
+                    :rows="c.rates"
+                    empty-text="No rate — amounts are entered per claim line."
+                />
+                <form
+                    v-if="can.edit"
+                    class="mt-3 flex flex-wrap items-center gap-2 text-sm"
+                    @submit.prevent="rate.post(route('admin.claim-types.rates.store', c.id), { onSuccess: () => { rate.reset(); rateFor = null; } })"
+                    @focusin="rateFor = c.id"
+                >
+                    <div class="w-44">
+                        <MoneyInput
+                            v-model="rate.rate"
+                            :invalid="rateFor === c.id && Boolean(rate.errors.rate)"
+                        />
+                    </div>
+                    <select
+                        v-model="rate.unit"
+                        aria-label="Unit"
+                        class="rounded-md border border-surface-300 px-2 py-2"
+                    >
+                        <option
+                            v-for="u in ['km', 'day', 'session', 'item']"
+                            :key="u"
+                        >
+                            {{ u }}
+                        </option>
+                    </select>
+                    <input
+                        v-model="rate.effective_from"
+                        type="date"
+                        aria-label="Effective from"
+                        class="rounded-md border border-surface-300 px-2 py-2"
+                    >
+                    <Button
+                        type="submit"
+                        variant="secondary"
+                    >
+                        New rate version
+                    </Button>
+                </form>
+            </Card>
+        </template>
     </AppLayout>
 </template>

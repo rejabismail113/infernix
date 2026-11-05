@@ -15,7 +15,7 @@ Status values: `todo`, `partial`, `done`, `deferred (reason)`. Updated in the sa
 | G-08 | CSV/XLSX export per authorization; PDF P0 official documents |  | P1 | 1a | partial (CSV exports audited for audit log, access reports, document inventory; XLSX/PDF in Prompt 3) | Kernel / M12 Administration | tests/Feature/Audit/AuditTrailTest.php, tests/Feature/Documents/ReportsTest.php |
 | G-09 | Configurable dictionaries: categories, P0 statuses, tax codes, project types |  | P1 | 1a | done | Kernel / M12 Administration | tests/Feature/Administration/MasterDataTest.php |
 | G-10 | Soft archive / immutable posted financial records | P0 | P1 | 1a | partial (document soft archive + tombstones; immutable posted financials in Prompt 2) | Kernel / M12 Administration | tests/Feature/Documents/LifecycleTest.php |
-| G-11 | Global search respecting record-level access | P1 | P1 (Prompt 1b) | 1a | partial (document metadata search row-filtered; global search later) | Kernel / M12 Administration | tests/Feature/Documents/SearchSecurityTest.php |
+| G-11 | Global search respecting record-level access | P1 | P1 (Prompt 1b) | 1a | partial (document search + permission-filtered record picker; global search later) | Kernel / M12 Administration | tests/Feature/Documents/SearchSecurityTest.php, tests/Feature/Shell/ShellTest.php |
 | G-12 | Timezone Asia/Kuala_Lumpur, MYR display and date consistency | P0 | P1 | 1a | done | Kernel / M12 Administration | tests/Feature/PlatformConfigTest.php (incl. DB session timezone regression) |
 | M01-01 | Record project/training revenue, grants and other inflows; separate capital/loans/refunds from sales. | P0 | P1 | 2 | todo | Finance |  |
 | M01-02 | Expenses distinguish DIRECT_COMPANY, STAFF_PAID_REIMBURSABLE and OWNER_PAID. | P0 | P1 | 2 | todo | Finance |  |
@@ -101,14 +101,14 @@ Status values: `todo`, `partial`, `done`, `deferred (reason)`. Updated in the sa
 | WF-07 | Credential access: request → resource-owner approval → vault entitlement → audit → revoke at offboarding; plaintext secret never returned | P0 | P3 | 5 | todo | Workflows |  |
 | WF-08 | Monthly closing: record → bank match → reconcile → trial balance → lock period → adjust with approval; all journals balance | P0 | P1/P4 | 2, 6 | todo | Workflows |  |
 | NFR-01 | Security: HTTPS/TLS, MFA for privileged roles, secure sessions, encryption at rest, secrets vault | — | P1 / P4 hardening | 6 | partial (MFA, session hardening in Prompt 6) | NFR | tests/Feature/Identity/MfaTest.php |
-| NFR-02 | Authorization: every protected endpoint denies unauthorized roles incl. direct URL and file access | — | P1 / P4 hardening | 6 | partial (deny-by-default, route 403s, file access; full route matrix in Prompt 6) | NFR | tests/Feature/Identity/AuthorizationTest.php, tests/Feature/Documents/DownloadSecurityTest.php |
+| NFR-02 | Authorization: every protected endpoint denies unauthorized roles incl. direct URL and file access | — | P1 / P4 hardening | 6 | partial (deny-by-default, route 403s + 403 page, file access, sidebar filtered server-side; full route matrix in Prompt 6) | NFR | tests/Feature/Identity/AuthorizationTest.php, tests/Feature/Documents/DownloadSecurityTest.php, tests/Feature/Shell/ShellTest.php |
 | NFR-03 | Auditability: who/what/when/entity/before-after; redact secret/PII | — | P1 / P4 hardening | 6 | done | NFR | tests/Feature/Audit/AuditTrailTest.php, tests/Unit/RedactorTest.php |
 | NFR-04 | Availability ≥99.5% monthly excl. approved maintenance | — | P1 / P4 hardening | 6 | todo | NFR |  |
 | NFR-05 | Performance: p95 common list/detail < 3 s under agreed load | — | P1 / P4 hardening | 6 | todo | NFR |  |
 | NFR-06 | Backup & restore: daily encrypted backup, RPO ≤24h, RTO ≤8h, quarterly restore test | — | P1 / P4 hardening | 6 | todo | NFR |  |
 | NFR-07 | Data privacy: least privilege, minimised medical/identity access, retention and consent controls | — | P1 / P4 hardening | 6 | partial (classification access, medical restriction, masking) | NFR | tests/Feature/Documents/{SearchSecurityTest,LifecycleTest}.php |
-| NFR-08 | Compatibility: responsive desktop/tablet, latest Chrome/Edge | — | P1 / P4 hardening | 6 | todo | NFR |  |
-| NFR-09 | Accessibility: keyboard navigation, labels, contrast, readable errors | — | P1 / P4 hardening | 6 | todo | NFR |  |
+| NFR-08 | Compatibility: responsive desktop/tablet, latest Chrome/Edge | — | P1 / P4 hardening | 6 | partial (responsive shell: desktop sidebar, tablet drawer; browser-checked at 1366 px and 820 px) | NFR | tests/Feature/Shell/ShellTest.php, resources/js/Components/Shell/Sidebar.test.ts |
+| NFR-09 | Accessibility: keyboard navigation, labels, contrast, readable errors | — | P1 / P4 hardening | 6 | partial (skip link, visible focus rings, keyboard picker/modal/table, labelled controls, readable error pages; full a11y pass in Prompt 6) | NFR | resources/js/Components/*.test.ts, tests/Feature/Shell/ShellTest.php |
 | NFR-10 | Observability: error logs, trace IDs, security alerts, backup-job monitoring | — | P1 / P4 hardening | 6 | todo | NFR |  |
 | NFR-11 | Maintainability: versioned migrations, automated tests, documented API and release procedure | — | P1 / P4 hardening | 6 | partial (foundation) | NFR | tests/Architecture/*, CI workflow |
 | NFR-12 | Localization: MYR, Malaysian addresses, Asia/Kuala_Lumpur, BM/EN labels | — | P1 / P4 hardening | 6 | partial (foundation) | NFR | tests/Feature/PlatformConfigTest.php |
@@ -127,7 +127,7 @@ Status values: `todo`, `partial`, `done`, `deferred (reason)`. Updated in the sa
 
 ## Coverage summary
 
-Total requirement IDs: 119. After Prompt 1b: done 20, partial 20, todo 79 (see rows).
+Total requirement IDs: 119. After Prompt 1c: done 20, partial 22, todo 77 (see rows).
 
 ## Prompt → phase map
 

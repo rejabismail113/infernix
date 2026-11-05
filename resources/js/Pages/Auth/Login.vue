@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import Flash from '@/Components/Flash.vue';
+import Flash from '@/Components/Feedback/FlashBanner.vue';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 
 const form = useForm({ email: '', password: '', remember: false });

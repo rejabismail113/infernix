@@ -1,8 +1,13 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Link, useForm } from '@inertiajs/vue3';
+import { ref } from 'vue';
+import Button from '@/Components/Button.vue';
 import FormField from '@/Components/FormField.vue';
-import SimpleTable from '@/Components/SimpleTable.vue';
+import Modal from '@/Components/Modal.vue';
+import StatusChip from '@/Components/StatusChip.vue';
+import DataTable from '@/Components/Table/DataTable.vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import type { TableColumn } from '@/types/table';
 
 interface UserRow { id: number; name: string; email: string; roles: string[]; mfa_enabled: boolean; active: boolean; last_login_at: string | null }
 defineProps<{
@@ -11,51 +16,87 @@ defineProps<{
     roles: { id: number; code: string; name: string }[];
     can: { create: boolean };
 }>();
+const inviteOpen = ref(false);
 const invite = useForm({ email: '', name: '', role: 'STF' });
-const columns = [
-    { key: 'name', label: 'Name' }, { key: 'email', label: 'Email' }, { key: 'roles', label: 'Roles' },
-    { key: 'mfa_enabled', label: 'MFA' }, { key: 'active', label: 'Active' }, { key: 'last_login_at', label: 'Last login' },
+const columns: TableColumn[] = [
+    { key: 'name', label: 'Name', sortable: true, hideable: false },
+    { key: 'email', label: 'Email', sortable: true },
+    { key: 'roles', label: 'Roles' },
+    { key: 'mfa_enabled', label: 'MFA', sortable: true },
+    { key: 'active', label: 'Status', sortable: true },
+    { key: 'last_login_at', label: 'Last login', sortable: true },
 ];
+function send() {
+    invite.post(route('admin.users.invite'), { onSuccess: () => { invite.reset(); inviteOpen.value = false; } });
+}
 </script>
 
 <template>
-    <AppLayout>
-        <Head title="Users" />
-        <template #header>
-            <h1 class="text-lg font-semibold">
-                Users
-            </h1>
+    <AppLayout
+        title="Users"
+        :breadcrumbs="[{ label: 'Administration' }, { label: 'Users' }]"
+    >
+        <template #actions>
+            <Button
+                v-if="can.create"
+                @click="inviteOpen = true"
+            >
+                Invite user
+            </Button>
         </template>
-        <SimpleTable
+        <DataTable
             :columns="columns"
             :rows="users"
+            prefs-key="admin.users"
+            caption="Users"
         >
-            <template #cell-mfa_enabled="{ row }">
-                {{ row.mfa_enabled ? 'on' : 'off' }}
-            </template>
-            <template #cell-active="{ row }">
-                {{ row.active ? 'yes' : 'no' }}
-            </template>
-            <template #actions="{ row }">
+            <template #cell-name="{ row }">
                 <Link
-                    :href="route('admin.users.show', row.id as number)"
-                    class="text-brand-700 hover:underline"
+                    :href="route('admin.users.show', row.id)"
+                    class="font-medium text-brand-700 hover:underline"
                 >
-                    Open
+                    {{ row.name }}
                 </Link>
             </template>
-        </SimpleTable>
+            <template #cell-roles="{ row }">
+                <span class="flex flex-wrap gap-1"><StatusChip
+                    v-for="r in row.roles"
+                    :key="r"
+                    :status="r"
+                    tone="brand"
+                    :label="r"
+                /></span>
+            </template>
+            <template #cell-mfa_enabled="{ row }">
+                <StatusChip
+                    :status="row.mfa_enabled ? 'active' : 'draft'"
+                    :label="row.mfa_enabled ? 'On' : 'Off'"
+                />
+            </template>
+            <template #cell-active="{ row }">
+                <StatusChip :status="row.active ? 'active' : 'deactivated'" />
+            </template>
+            <template #cell-last_login_at="{ row }">
+                {{ row.last_login_at ? row.last_login_at.slice(0, 16).replace('T', ' ') : 'never' }}
+            </template>
+        </DataTable>
 
-        <section
-            v-if="can.create"
-            class="mt-8 max-w-lg rounded-lg border border-surface-200 bg-white p-4"
+        <DataTable
+            v-if="invitations.length"
+            :columns="[{ key: 'email', label: 'Pending invitation' }, { key: 'role', label: 'Role' }, { key: 'expires_at', label: 'Expires' }]"
+            :rows="invitations"
+        />
+
+        <Modal
+            :open="inviteOpen"
+            title="Invite a user"
+            size="md"
+            @close="inviteOpen = false"
         >
-            <h2 class="mb-3 font-semibold">
-                Invite a user
-            </h2>
             <form
+                id="invite-form"
                 class="space-y-3"
-                @submit.prevent="invite.post(route('admin.users.invite'), { onSuccess: () => invite.reset() })"
+                @submit.prevent="send"
             >
                 <FormField
                     id="inv-email"
@@ -65,6 +106,7 @@ const columns = [
                     <input
                         id="inv-email"
                         v-model="invite.email"
+                        data-autofocus
                         type="email"
                         required
                         class="w-full rounded-md border border-surface-300 px-3 py-2"
@@ -99,25 +141,22 @@ const columns = [
                         </option>
                     </select>
                 </FormField>
-                <button
+            </form>
+            <template #footer>
+                <Button
+                    variant="secondary"
+                    @click="inviteOpen = false"
+                >
+                    Cancel
+                </Button>
+                <Button
                     type="submit"
+                    form="invite-form"
                     :disabled="invite.processing"
-                    class="rounded-md bg-brand-600 px-4 py-2 text-white hover:bg-brand-700 disabled:opacity-50"
                 >
                     Send invitation
-                </button>
-            </form>
-            <ul
-                v-if="invitations.length"
-                class="mt-4 text-sm text-surface-600"
-            >
-                <li
-                    v-for="i in invitations"
-                    :key="i.id"
-                >
-                    Pending: {{ i.email }} ({{ i.role }}) · expires {{ i.expires_at.slice(0, 10) }}
-                </li>
-            </ul>
-        </section>
+                </Button>
+            </template>
+        </Modal>
     </AppLayout>
 </template>

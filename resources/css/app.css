@@ -3,7 +3,27 @@
 @tailwind utilities;
 
 @layer base {
+    /* Visible focus on every interactive element (NFR-09). */
     :focus-visible {
         @apply outline-none ring-2 ring-brand-500 ring-offset-2;
+    }
+
+    input:not([type='checkbox']):not([type='radio']):not([type='file']),
+    select,
+    textarea {
+        @apply bg-white text-surface-900;
+    }
+
+    select {
+        @apply pr-8;
+    }
+
+    input[type='checkbox'],
+    input[type='radio'] {
+        accent-color: theme('colors.brand.600');
+    }
+
+    ::placeholder {
+        @apply text-surface-400;
     }
 }

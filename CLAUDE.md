@@ -97,6 +97,10 @@ posting recipes. `tests/Architecture/ArchitectureTest.php` enforces the boundari
 - Vue: `resources/js/Pages/<Module>/<Page>.vue`, shared components in `resources/js/Components/`. Props and
   Inertia payloads are typed in `resources/js/types/`. Money props are `string` (decimal) — never `number`
   except integer minor units named `*_minor`.
+- Shared UI (Prompt 1c): every page uses `AppLayout` (title, breadcrumbs, status chip, `#actions`) and
+  `<DataTable>` for lists — server mode via `useServerTable` for paged data (server whitelists `sort`/`per_page`).
+  Use `<StatusChip>`, `<PickerModal>`, `<Stepper>`, `<MoneyInput>` (decimal string or `*_minor` integer only),
+  `<FileDropzone>`, `<Modal>`; do not build one-off tables, pickers or money inputs.
 - i18n: labels via keys (`finance.claims.status.approved`) with EN now, BM later (NFR-12).
 
 ## Requirement traceability

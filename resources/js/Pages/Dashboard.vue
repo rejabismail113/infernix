@@ -1,28 +1,40 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
+import Card from '@/Components/Card.vue';
+import Icon from '@/Components/Icon.vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import type { SharedProps } from '@/types';
 
 defineProps<{ company: { name: string; tagline: string } }>();
+const page = usePage<SharedProps>();
 </script>
 
 <template>
-    <AppLayout>
-        <Head title="Dashboard" />
-        <template #header>
-            <h1 class="text-lg font-semibold">
-                Dashboard
-            </h1>
-        </template>
-        <div class="rounded-xl border border-surface-200 bg-white p-8">
-            <h2 class="text-2xl font-semibold">
+    <AppLayout
+        title="Dashboard"
+        :breadcrumbs="[{ label: 'Home' }]"
+    >
+        <Card>
+            <h2 class="text-xl font-semibold">
                 {{ company.name }}
             </h2>
             <p class="text-surface-500">
                 {{ company.tagline }}
             </p>
-            <p class="mt-6 text-sm text-surface-700">
-                Bootstrap complete. Modules M01–M13 are scaffolded; business features arrive in the next build prompts.
+            <p class="mt-4 text-sm text-surface-600">
+                Owner and finance dashboards arrive with the finance modules. Use the shortcuts below for what is available today.
             </p>
+        </Card>
+        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <Link
+                v-for="item in (page.props.nav ?? []).filter((n) => n.group !== 'Overview')"
+                :key="item.href"
+                :href="item.href"
+                class="flex items-center gap-3 rounded-lg border border-surface-200 bg-white p-4 text-sm font-medium hover:border-brand-300 hover:bg-brand-50"
+            >
+                <span class="rounded-md bg-brand-50 p-2 text-brand-600"><Icon :name="item.icon" /></span>
+                {{ item.label }}
+            </Link>
         </div>
     </AppLayout>
 </template>

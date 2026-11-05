@@ -27,9 +27,10 @@ abstract class ResourcePolicy
         return $this->permissions->can($user, PermissionAction::View, $this->model::resourceName());
     }
 
-    public function view(User $user, PermissionResource $resource): bool
+    /** Record-level check; called with only a class (type-level) it asks whether the user may view any record. */
+    public function view(User $user, ?PermissionResource $resource = null): bool
     {
-        return $this->permissions->can($user, PermissionAction::View, $resource);
+        return $this->permissions->can($user, PermissionAction::View, $resource ?? $this->model::resourceName());
     }
 
     public function create(User $user): bool
@@ -37,24 +38,28 @@ abstract class ResourcePolicy
         return $this->permissions->can($user, PermissionAction::Create, $this->model::resourceName());
     }
 
-    public function update(User $user, PermissionResource $resource): bool
+    /** Record-level check; called with only a class (type-level) it asks whether the user may update any record. */
+    public function update(User $user, ?PermissionResource $resource = null): bool
     {
-        return $this->permissions->can($user, PermissionAction::Edit, $resource);
+        return $this->permissions->can($user, PermissionAction::Edit, $resource ?? $this->model::resourceName());
     }
 
-    public function delete(User $user, PermissionResource $resource): bool
+    /** Record-level check; called with only a class (type-level) it asks whether the user may delete any record. */
+    public function delete(User $user, ?PermissionResource $resource = null): bool
     {
-        return $this->permissions->can($user, PermissionAction::Delete, $resource);
+        return $this->permissions->can($user, PermissionAction::Delete, $resource ?? $this->model::resourceName());
     }
 
-    public function approve(User $user, PermissionResource $resource): bool
+    /** Record-level check; called with only a class (type-level) it asks whether the user may approve any record. */
+    public function approve(User $user, ?PermissionResource $resource = null): bool
     {
-        return $this->permissions->can($user, PermissionAction::Approve, $resource);
+        return $this->permissions->can($user, PermissionAction::Approve, $resource ?? $this->model::resourceName());
     }
 
-    public function pay(User $user, PermissionResource $resource): bool
+    /** Record-level check; called with only a class (type-level) it asks whether the user may pay any record. */
+    public function pay(User $user, ?PermissionResource $resource = null): bool
     {
-        return $this->permissions->can($user, PermissionAction::Pay, $resource);
+        return $this->permissions->can($user, PermissionAction::Pay, $resource ?? $this->model::resourceName());
     }
 
     public function export(User $user): bool
@@ -62,8 +67,9 @@ abstract class ResourcePolicy
         return $this->permissions->can($user, PermissionAction::Export, $this->model::resourceName());
     }
 
-    public function reveal(User $user, PermissionResource $resource): bool
+    /** Record-level check; called with only a class (type-level) it asks whether the user may reveal any record. */
+    public function reveal(User $user, ?PermissionResource $resource = null): bool
     {
-        return $this->permissions->can($user, PermissionAction::Reveal, $resource);
+        return $this->permissions->can($user, PermissionAction::Reveal, $resource ?? $this->model::resourceName());
     }
 }

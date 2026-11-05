@@ -26,7 +26,7 @@ final class DocumentPolicy extends ResourcePolicy
         parent::__construct($permissions);
     }
 
-    public function view(User $user, PermissionResource $resource): bool
+    public function view(User $user, ?PermissionResource $resource = null): bool
     {
         return $resource instanceof Document && $this->access->canView($user, $resource);
     }
@@ -36,20 +36,20 @@ final class DocumentPolicy extends ResourcePolicy
         return $this->access->canView($user, $document);
     }
 
-    public function update(User $user, PermissionResource $resource): bool
+    public function update(User $user, ?PermissionResource $resource = null): bool
     {
         return $resource instanceof Document && $this->access->canEdit($user, $resource);
     }
 
     /** Hard delete: documents.delete (OWN) on a document the user can see. */
-    public function delete(User $user, PermissionResource $resource): bool
+    public function delete(User $user, ?PermissionResource $resource = null): bool
     {
         return $resource instanceof Document && $this->access->canView($user, $resource)
             && $this->permissions->can($user, PermissionAction::Delete, $resource);
     }
 
     /** Legal hold / retention changes: documents.approve (OWN). */
-    public function approve(User $user, PermissionResource $resource): bool
+    public function approve(User $user, ?PermissionResource $resource = null): bool
     {
         return $resource instanceof Document && $this->access->canView($user, $resource)
             && $this->permissions->can($user, PermissionAction::Approve, $resource);

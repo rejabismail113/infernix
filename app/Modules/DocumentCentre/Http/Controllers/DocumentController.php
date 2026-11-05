@@ -19,6 +19,7 @@ use App\Modules\DocumentCentre\Services\DocumentSearch;
 use App\Modules\DocumentCentre\Services\DocumentService;
 use App\Modules\DocumentCentre\Services\DocumentUrlSigner;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -62,11 +63,20 @@ final class DocumentController
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date'],
             'include_archived' => ['nullable', 'boolean'],
+            'sort' => ['nullable', 'in:title,classification,uploaded_at,version'],
+            'dir' => ['nullable', 'in:asc,desc'],
+            'per_page' => ['nullable', 'integer', 'in:10,25,50,100'],
+            'page' => ['nullable', 'integer', 'min:1'],
         ]);
 
-        $page = $this->search->query($user, $filters)
+        $query = $this->search->query($user, $filters);
+        if (! empty($filters['sort'])) {
+            $column = ['title' => 'documents.title', 'classification' => 'documents.classification', 'uploaded_at' => 'documents.uploaded_at', 'version' => 'documents.current_version_no'][$filters['sort']];
+            $query->reorder($column, ($filters['dir'] ?? 'asc') === 'desc' ? 'desc' : 'asc')->orderBy('documents.id');
+        }
+        $page = $query
             ->with(['currentVersion', 'owner:id,name', 'links'])
-            ->paginate(25)->withQueryString()
+            ->paginate((int) ($filters['per_page'] ?? 25))->withQueryString()
             ->through(fn (Document $d): array => $this->row($d));
 
         return Inertia::render('Documents/Index', [
@@ -301,6 +311,31 @@ final class DocumentController
         }
 
         return redirect()->route('documents.index')->with('success', __('Document permanently deleted.'));
+    }
+
+    /**
+     * Search records the user may attach documents to (feeds the link picker). Only records the user may
+     * UPDATE are returned, so the picker never reveals records they cannot see.
+     */
+    public function linkTargets(Request $request): JsonResponse
+    {
+        $this->authorize('create', Document::class);
+        $data = $request->validate([
+            'type' => ['required', 'string', Rule::in(array_keys($this->registry->all()))],
+            'q' => ['nullable', 'string', 'max:80'],
+        ]);
+        /** @var User $user */
+        $user = $request->user();
+        $type = $this->registry->get($data['type']);
+        $term = mb_strtolower(trim((string) ($data['q'] ?? '')));
+
+        $items = $type->modelClass::query()->orderBy('id')->limit(500)->get()
+            ->filter(fn ($m): bool => Gate::forUser($user)->allows('update', $m))
+            ->map(fn ($m): array => ['id' => (int) $m->getKey(), 'label' => $type->label($m), 'meta' => '#'.$m->getKey()])
+            ->filter(fn (array $i): bool => $term === '' || str_contains(mb_strtolower($i['label']), $term) || $i['meta'] === '#'.$term)
+            ->take(25)->values();
+
+        return response()->json(['items' => $items, 'link_types' => $this->registry->linkTypesFor($data['type'])]);
     }
 
     /**

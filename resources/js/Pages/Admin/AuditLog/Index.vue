@@ -1,27 +1,47 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
 import { reactive } from 'vue';
+import Button from '@/Components/Button.vue';
+import StatusChip from '@/Components/StatusChip.vue';
+import DataTable from '@/Components/Table/DataTable.vue';
+import { toPagination, useServerTable, type LaravelPage } from '@/composables/useServerTable';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import type { TableColumn } from '@/types/table';
 
 interface Ev { id: number; occurred_at: string; actor: string | null; actor_role: string | null; action: string; entity_type: string; entity_id: number | null; before: Record<string, unknown> | null; after: Record<string, unknown> | null; redactions: string[] | null; ip: string | null; request_id: string | null; reason: string | null }
-interface Paginated { data: Ev[]; links: { url: string | null; label: string; active: boolean }[]; total: number }
-const props = defineProps<{ events: Paginated; filters: Record<string, string | null>; actions: string[]; can: { export: boolean } }>();
+const props = defineProps<{ events: LaravelPage<Ev>; filters: Record<string, string | null>; actions: string[]; can: { export: boolean } }>();
+
 const f = reactive({ action: props.filters.action ?? '', entity_type: props.filters.entity_type ?? '', entity_id: props.filters.entity_id ?? '', from: props.filters.from ?? '', to: props.filters.to ?? '' });
-const apply = () => router.get(route('admin.audit-log.index'), Object.fromEntries(Object.entries(f).filter(([, v]) => v !== '')), { preserveState: true });
-const label = (l: string) => l.replace('&laquo;', '«').replace('&raquo;', '»');
+const table = useServerTable(() => route('admin.audit-log.index'), () => props.filters);
+const apply = () => table.visit({ ...f, page: 1 });
 const exportUrl = () => route('admin.audit-log.export', Object.fromEntries(Object.entries(f).filter(([, v]) => v !== '')));
+
+const columns: TableColumn[] = [
+    { key: 'occurred_at', label: 'When', sortable: true, hideable: false },
+    { key: 'actor', label: 'Actor' },
+    { key: 'action', label: 'Action', sortable: true },
+    { key: 'entity_type', label: 'Entity', sortable: true },
+    { key: 'change', label: 'Before → after' },
+    { key: 'reason', label: 'Reason' },
+    { key: 'ip', label: 'IP / request', hidden: true },
+];
+const tone = (a: string) => (a.includes('fail') || a.includes('denied') || a.includes('rejected') || a === 'hard_delete' ? 'danger' : a.includes('permission') || a.includes('lock') || a === 'reveal' || a === 'export' ? 'warning' : 'neutral');
 </script>
 
 <template>
-    <AppLayout>
-        <Head title="Audit log" />
-        <template #header>
-            <h1 class="text-lg font-semibold">
-                Audit log <span class="text-sm font-normal text-surface-500">({{ events.total }})</span>
-            </h1>
+    <AppLayout
+        title="Audit log"
+        :breadcrumbs="[{ label: 'Administration' }, { label: 'Audit log' }]"
+    >
+        <template #chips>
+            <StatusChip
+                status="info"
+                tone="info"
+                :label="`${events.total} events`"
+            />
         </template>
         <form
-            class="mb-4 flex flex-wrap gap-2 text-sm"
+            class="flex flex-wrap items-end gap-2 rounded-lg border border-surface-200 bg-white p-3 text-sm"
+            role="search"
             @submit.prevent="apply"
         >
             <select
@@ -30,7 +50,7 @@ const exportUrl = () => route('admin.audit-log.export', Object.fromEntries(Objec
                 class="rounded-md border border-surface-300 px-2 py-2"
             >
                 <option value="">
-                    any action
+                    Any action
                 </option>
                 <option
                     v-for="a in actions"
@@ -41,126 +61,88 @@ const exportUrl = () => route('admin.audit-log.export', Object.fromEntries(Objec
             </select>
             <input
                 v-model="f.entity_type"
-                placeholder="entity type"
+                placeholder="Entity type"
                 aria-label="Entity type"
-                class="rounded-md border border-surface-300 px-2 py-2"
+                class="rounded-md border border-surface-300 px-3 py-2"
             >
             <input
                 v-model="f.entity_id"
-                placeholder="entity id"
+                placeholder="Entity id"
                 aria-label="Entity id"
-                class="w-24 rounded-md border border-surface-300 px-2 py-2"
+                class="w-28 rounded-md border border-surface-300 px-3 py-2"
             >
             <input
                 v-model="f.from"
                 type="date"
                 aria-label="From"
-                class="rounded-md border border-surface-300 px-2 py-2"
+                class="rounded-md border border-surface-300 px-3 py-2"
             >
             <input
                 v-model="f.to"
                 type="date"
                 aria-label="To"
-                class="rounded-md border border-surface-300 px-2 py-2"
+                class="rounded-md border border-surface-300 px-3 py-2"
             >
-            <button
-                type="submit"
-                class="rounded-md bg-brand-600 px-3 py-2 text-white"
-            >
+            <Button type="submit">
                 Filter
-            </button>
-            <a
-                v-if="can.export"
-                :href="exportUrl()"
-                class="rounded-md border border-surface-300 px-3 py-2 hover:bg-surface-100"
-            >Export CSV (audited)</a>
+            </Button>
         </form>
-        <div class="overflow-x-auto rounded-lg border border-surface-200 bg-white">
-            <table class="min-w-full text-xs">
-                <thead class="bg-surface-100 text-left uppercase text-surface-500">
-                    <tr>
-                        <th class="px-2 py-2">
-                            When
-                        </th><th class="px-2 py-2">
-                            Actor
-                        </th><th class="px-2 py-2">
-                            Action
-                        </th><th class="px-2 py-2">
-                            Entity
-                        </th><th class="px-2 py-2">
-                            Before → after
-                        </th><th class="px-2 py-2">
-                            Reason
-                        </th><th class="px-2 py-2">
-                            IP / request
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr
-                        v-for="e in events.data"
-                        :key="e.id"
-                        class="border-t border-surface-100 align-top"
-                    >
-                        <td class="whitespace-nowrap px-2 py-1">
-                            {{ e.occurred_at.replace('T', ' ').slice(0, 19) }}
-                        </td>
-                        <td class="px-2 py-1">
-                            {{ e.actor ?? 'system' }}<br><span class="text-surface-400">{{ e.actor_role }}</span>
-                        </td>
-                        <td class="px-2 py-1 font-medium">
-                            {{ e.action }}
-                        </td>
-                        <td class="px-2 py-1">
-                            {{ e.entity_type }}<span v-if="e.entity_id">#{{ e.entity_id }}</span>
-                        </td>
-                        <td class="max-w-lg px-2 py-1 font-mono">
-                            <div
-                                v-if="e.before"
-                                class="text-red-700"
-                            >
-                                {{ JSON.stringify(e.before) }}
-                            </div>
-                            <div
-                                v-if="e.after"
-                                class="text-green-700"
-                            >
-                                {{ JSON.stringify(e.after) }}
-                            </div>
-                            <div
-                                v-if="e.redactions?.length"
-                                class="text-surface-400"
-                            >
-                                redacted: {{ e.redactions.join(', ') }}
-                            </div>
-                        </td>
-                        <td class="px-2 py-1">
-                            {{ e.reason }}
-                        </td>
-                        <td class="px-2 py-1 text-surface-400">
-                            {{ e.ip }}<br>{{ e.request_id?.slice(0, 8) }}
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <nav
-            class="mt-3 flex flex-wrap gap-1 text-sm"
-            aria-label="Pagination"
+        <DataTable
+            :columns="columns"
+            :rows="events.data"
+            :pagination="toPagination(events)"
+            :sort="table.sort.value"
+            :loading="table.loading.value"
+            :export-url="can.export ? exportUrl() : null"
+            prefs-key="admin.audit-log"
+            caption="Audit events"
+            @sort="table.onSort"
+            @page="table.onPage"
+            @per-page="table.onPerPage"
         >
-            <template
-                v-for="l in events.links"
-                :key="l.label"
-            >
-                <Link
-                    v-if="l.url"
-                    :href="l.url"
-                    class="rounded border px-2 py-1"
-                    :class="l.active ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-surface-200'"
-                >
-                    {{ label(l.label) }}
-                </Link>
+            <template #cell-occurred_at="{ row }">
+                <span class="whitespace-nowrap font-mono text-xs">{{ row.occurred_at.replace('T', ' ').slice(0, 19) }}</span>
             </template>
-        </nav>
+            <template #cell-actor="{ row }">
+                {{ row.actor ?? 'system' }} <span class="block text-xs text-surface-400">{{ row.actor_role }}</span>
+            </template>
+            <template #cell-action="{ row }">
+                <StatusChip
+                    :status="row.action"
+                    :tone="tone(row.action)"
+                    :label="row.action"
+                />
+            </template>
+            <template #cell-entity_type="{ row }">
+                {{ row.entity_type }}<span v-if="row.entity_id">#{{ row.entity_id }}</span>
+            </template>
+            <template #cell-change="{ row }">
+                <div class="max-w-md font-mono text-xs">
+                    <div
+                        v-if="row.before"
+                        class="truncate text-red-700"
+                        :title="JSON.stringify(row.before)"
+                    >
+                        − {{ JSON.stringify(row.before) }}
+                    </div>
+                    <div
+                        v-if="row.after"
+                        class="truncate text-emerald-700"
+                        :title="JSON.stringify(row.after)"
+                    >
+                        + {{ JSON.stringify(row.after) }}
+                    </div>
+                    <div
+                        v-if="row.redactions?.length"
+                        class="text-surface-400"
+                    >
+                        redacted: {{ row.redactions.join(', ') }}
+                    </div>
+                </div>
+            </template>
+            <template #cell-ip="{ row }">
+                <span class="text-xs text-surface-500">{{ row.ip }} · {{ row.request_id?.slice(0, 8) }}</span>
+            </template>
+        </DataTable>
     </AppLayout>
 </template>

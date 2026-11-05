@@ -17,6 +17,7 @@ Route::middleware(['web', 'app'])->prefix('documents')->name('documents.')->grou
     Route::get('/', [DocumentController::class, 'index'])->name('index');
     Route::post('/', [DocumentController::class, 'store'])->middleware('throttle:30,1')->name('store');
 
+    Route::get('link-targets', [DocumentController::class, 'linkTargets'])->middleware('throttle:60,1')->name('link-targets');
     Route::get('reports/inventory', [DocumentReportController::class, 'inventory'])->name('reports.inventory');
     Route::get('reports/inventory/export', [DocumentReportController::class, 'inventoryExport'])->name('reports.inventory.export');
     Route::get('reports/recent-changes', [DocumentReportController::class, 'recentChanges'])->name('reports.recent-changes');

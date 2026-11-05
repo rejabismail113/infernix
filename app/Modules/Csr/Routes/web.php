@@ -8,6 +8,6 @@ use Illuminate\Support\Facades\Route;
  * M08 Csr routes. Every route MUST be wrapped in auth + a policy/permission check
  * (deny-by-default, CLAUDE.md rule 3). Routes are added in later prompts.
  */
-Route::middleware(['web', 'auth'])->prefix('csr')->name('csr.')->group(function (): void {
+Route::middleware(['web', 'app'])->prefix('csr')->name('csr.')->group(function (): void {
     //
 });

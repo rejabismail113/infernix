@@ -8,6 +8,6 @@ use Illuminate\Support\Facades\Route;
  * M04 HumanResources routes. Every route MUST be wrapped in auth + a policy/permission check
  * (deny-by-default, CLAUDE.md rule 3). Routes are added in later prompts.
  */
-Route::middleware(['web', 'auth'])->prefix('humanresources')->name('humanresources.')->group(function (): void {
+Route::middleware(['web', 'app'])->prefix('humanresources')->name('humanresources.')->group(function (): void {
     //
 });

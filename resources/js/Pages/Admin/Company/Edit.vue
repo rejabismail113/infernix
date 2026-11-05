@@ -1,0 +1,120 @@
+<script setup lang="ts">
+import { Head, useForm } from '@inertiajs/vue3';
+import FormField from '@/Components/FormField.vue';
+import SimpleTable from '@/Components/SimpleTable.vue';
+import AppLayout from '@/Layouts/AppLayout.vue';
+
+interface Company { id: number; name: string; ssm_no: string | null; address: Record<string, string> | null; phone: string | null; email: string | null; signatory_name: string | null; signatory_title: string | null; base_currency: string; timezone: string }
+const props = defineProps<{ company: Company; bankAccounts: { id: number; bank_name: string; account_no_masked: string; account_name: string; is_default: boolean; active: boolean }[]; can: { edit: boolean } }>();
+const addressKeys = ['line1', 'city', 'postcode', 'state', 'country'] as const;
+const form = useForm({ ...props.company, address: { line1: '', city: '', postcode: '', state: '', country: 'Malaysia', ...(props.company.address ?? {}) } as Record<(typeof addressKeys)[number], string> });
+const bank = useForm({ bank_name: '', account_no: '', account_name: '', is_default: false });
+const fields: { key: keyof Omit<Company, 'id' | 'address' | 'base_currency' | 'timezone'>; label: string }[] = [
+    { key: 'name', label: 'Company name' }, { key: 'ssm_no', label: 'SSM no.' }, { key: 'phone', label: 'Phone' }, { key: 'email', label: 'Email' },
+    { key: 'signatory_name', label: 'Authorised signatory' }, { key: 'signatory_title', label: 'Signatory title' },
+];
+</script>
+
+<template>
+    <AppLayout>
+        <Head title="Company" />
+        <template #header>
+            <h1 class="text-lg font-semibold">
+                Company profile
+            </h1>
+        </template>
+        <form
+            class="grid max-w-2xl grid-cols-1 gap-3 rounded-lg border border-surface-200 bg-white p-4 md:grid-cols-2"
+            @submit.prevent="form.put(route('admin.company.update'))"
+        >
+            <FormField
+                v-for="f in fields"
+                :id="f.key"
+                :key="f.key"
+                :label="f.label"
+                :error="form.errors[f.key]"
+            >
+                <input
+                    :id="f.key"
+                    v-model="form[f.key]"
+                    :disabled="!can.edit"
+                    class="w-full rounded-md border border-surface-300 px-3 py-2"
+                >
+            </FormField>
+            <FormField
+                v-for="k in addressKeys"
+                :id="'addr-' + k"
+                :key="k"
+                :label="'Address ' + k"
+            >
+                <input
+                    :id="'addr-' + k"
+                    v-model="form.address[k]"
+                    :disabled="!can.edit"
+                    class="w-full rounded-md border border-surface-300 px-3 py-2"
+                >
+            </FormField>
+            <p class="text-sm text-surface-500 md:col-span-2">
+                Base currency {{ company.base_currency }} · timezone {{ company.timezone }}
+            </p>
+            <button
+                v-if="can.edit"
+                type="submit"
+                :disabled="form.processing"
+                class="rounded-md bg-brand-600 px-4 py-2 text-white hover:bg-brand-700 disabled:opacity-50 md:col-span-2"
+            >
+                Save
+            </button>
+        </form>
+
+        <h2 class="mb-2 mt-8 font-semibold">
+            Bank accounts
+        </h2>
+        <SimpleTable
+            :columns="[{ key: 'bank_name', label: 'Bank' }, { key: 'account_no_masked', label: 'Account no.' }, { key: 'account_name', label: 'Name' }, { key: 'is_default', label: 'Default' }]"
+            :rows="bankAccounts"
+        >
+            <template #cell-is_default="{ row }">
+                {{ row.is_default ? 'yes' : '' }}
+            </template>
+        </SimpleTable>
+        <form
+            v-if="can.edit"
+            class="mt-3 grid max-w-2xl grid-cols-2 gap-3 text-sm md:grid-cols-5"
+            @submit.prevent="bank.post(route('admin.company.bank-accounts.store'), { onSuccess: () => bank.reset() })"
+        >
+            <input
+                v-model="bank.bank_name"
+                required
+                placeholder="Bank"
+                aria-label="Bank"
+                class="rounded-md border border-surface-300 px-2 py-2"
+            >
+            <input
+                v-model="bank.account_no"
+                required
+                placeholder="Account no."
+                aria-label="Account number"
+                class="rounded-md border border-surface-300 px-2 py-2"
+            >
+            <input
+                v-model="bank.account_name"
+                required
+                placeholder="Account name"
+                aria-label="Account name"
+                class="rounded-md border border-surface-300 px-2 py-2"
+            >
+            <label class="flex items-center gap-2"><input
+                v-model="bank.is_default"
+                type="checkbox"
+            > default</label>
+            <button
+                type="submit"
+                :disabled="bank.processing"
+                class="rounded-md bg-brand-600 px-3 py-2 text-white hover:bg-brand-700 disabled:opacity-50"
+            >
+                Add
+            </button>
+        </form>
+    </AppLayout>
+</template>

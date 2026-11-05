@@ -27,6 +27,12 @@ return [
         'password' => env('SEED_OWNER_PASSWORD', ''),
     ],
 
+    'security' => [
+        'recent_auth_minutes' => 10,
+        'invitation_days' => 7,
+        'mfa_issuer' => 'Infernix One',
+    ],
+
     'vault' => ['driver' => env('VAULT_DRIVER', 'null')],
     'documents' => [
         'disk' => env('FILESYSTEM_DISK', 'documents'),

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
+import Flash from '@/Components/Flash.vue';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 
 const form = useForm({ email: '', password: '', remember: false });
@@ -15,6 +16,7 @@ function submit() {
         <h1 class="mb-6 text-xl font-semibold">
             Sign in
         </h1>
+        <Flash />
         <form
             class="space-y-4"
             @submit.prevent="submit"
@@ -73,6 +75,12 @@ function submit() {
             >
                 Log in
             </button>
+            <Link
+                :href="route('password.request')"
+                class="block text-center text-sm text-surface-500 hover:underline"
+            >
+                Forgot password?
+            </Link>
         </form>
     </GuestLayout>
 </template>

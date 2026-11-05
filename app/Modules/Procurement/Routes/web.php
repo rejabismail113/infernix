@@ -8,6 +8,6 @@ use Illuminate\Support\Facades\Route;
  * M10 Procurement routes. Every route MUST be wrapped in auth + a policy/permission check
  * (deny-by-default, CLAUDE.md rule 3). Routes are added in later prompts.
  */
-Route::middleware(['web', 'auth'])->prefix('procurement')->name('procurement.')->group(function (): void {
+Route::middleware(['web', 'app'])->prefix('procurement')->name('procurement.')->group(function (): void {
     //
 });

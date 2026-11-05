@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
+import Flash from '@/Components/Flash.vue';
 import type { SharedProps } from '@/types';
 
-/**
- * Temporary shell. Prompt 1c replaces this with the full sidebar/breadcrumb/DataTable shell
- * modelled on docs/reference/*.jpg.
- */
+/** Temporary shell; Prompt 1c replaces it with the full sidebar/breadcrumb/DataTable shell. */
 const page = usePage<SharedProps>();
 </script>
 
@@ -21,15 +19,28 @@ const page = usePage<SharedProps>();
                 <span class="font-semibold">Infernix One</span>
             </div>
             <nav
-                class="flex-1 px-2 py-2 text-sm"
+                class="flex-1 space-y-1 px-2 py-2 text-sm"
                 aria-label="Main"
             >
                 <Link
                     :href="route('dashboard')"
-                    class="block rounded-md bg-brand-50 px-3 py-2 font-medium text-brand-700"
+                    class="block rounded-md px-3 py-2 font-medium hover:bg-surface-100"
                 >
                     Dashboard
                 </Link>
+                <template v-if="page.props.nav?.length">
+                    <p class="px-3 pt-3 text-xs uppercase text-surface-400">
+                        Administration
+                    </p>
+                    <Link
+                        v-for="item in page.props.nav"
+                        :key="item.href"
+                        :href="item.href"
+                        class="block rounded-md px-3 py-2 hover:bg-surface-100"
+                    >
+                        {{ item.label }}
+                    </Link>
+                </template>
             </nav>
         </aside>
         <div class="flex flex-1 flex-col">
@@ -48,6 +59,7 @@ const page = usePage<SharedProps>();
                 </div>
             </header>
             <main class="flex-1 p-6">
+                <Flash />
                 <slot />
             </main>
         </div>

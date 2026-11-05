@@ -14,6 +14,13 @@ Global guards (apply on top of every row): deny-by-default; MFA required for OWN
 maker-checker on approve/pay (creator ≠ approver unless OWN override with reason, audited); re-authentication
 for `reveal`, period lock/unlock, permission changes and payments above the configured threshold.
 
+## Resource keys (as seeded in `permissions.resource`)
+
+`users`, `permissions`, `delegations`, `company`, `fiscal_periods`, `numbering`, `dictionaries`,
+`notification_rules`, `audit_log`, `backup_status`, `reports_access` — seeded by
+`database/seeders/PermissionMatrixSeeder.php` (Prompt 1a). Later prompts append their resources
+(`documents`, `claims`, `journals`, …). The table below is the human-readable source; the seeder must match it.
+
 ## Kernel / M12 Administration
 
 | Resource | OWN | FIN | PM | HR | STF | AUD | APP |

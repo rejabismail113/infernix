@@ -16,6 +16,11 @@ deviations are `D-0x`.
 | D-04 | Logo asset | `public/images/infernix-logo.svg` is a **PLACEHOLDER** wordmark | The real `docs/reference/infernix-logo.jpg` and the 3 UI screenshots were shared inline in chat, not as files, so they could not be copied into the repo. Drop them into `docs/reference/` (see its README) and Prompt 1c will wire the real file. |
 | D-05 | phpstan/phpstan install | Standard composer.lock; in restricted-network environments the archive-only `phpstan/phpstan` package is installed from its git tag | Only affects sandboxes without GitHub API access; `composer install` is standard elsewhere. |
 
+| D-06 | Permission evaluation | A single `PermissionService::can(user, action, resource|model)`; widest scope across a user's roles wins; AUD may never hold write actions even if a matrix row says so; `Gate::before` denies inactive/out-of-window users and leaves undefined abilities to Laravel's default deny | Prompt 1a | Keeps every policy a one-liner over the matrix; the Prompt 6 route matrix test will verify it per route. |
+| D-07 | Assigned scope for M12 objects | `assigned` currently means: delegation → delegate; everything else → not assigned. Project membership / explicit shares populate `user_scopes` from Prompt 1b/4 | Prompt 1a | `UserScope` table exists so no migration churn later. |
+| D-08 | Re-authentication | Session-stamped window of 10 minutes (`infernix.security.recent_auth_minutes`); mutations without a recent stamp are redirected to `/reauth` and never replayed automatically | Prompt 1a | SRS asks for a prompt, not a replay. |
+| D-09 | Seeded Owner & MFA | The seeded Owner must enrol in TOTP at first login (OWN requires MFA). Dev secret is never pre-seeded. | Prompt 1a | Tests enrol directly via a helper. |
+
 ## SRS §9.1 open decisions — defaults assumed
 
 | ID | SRS decision | Default assumed for the build | Configurable where | Flag |
@@ -40,6 +45,19 @@ deviations are `D-0x`.
 | D-27 | Document numbering | Formats `QT-{YYYY}-{0001}`, `INV-`, `RC-`, `PV-`, `CN-`, `PO-`, `JV-`, `CL-` (claims), `BL-` (bills), `PR-`; fiscal-year reset; void retains the number. | `numbering_sequences` | pending owner |
 | D-28 | Session / MFA | TOTP (RFC 6238) via `pragmarx/google2fa`; enforced for OWN and FIN at first login; optional otherwise; recovery codes; recent-auth window 10 minutes for sensitive actions. | `settings: security.*` | — |
 | D-29 | Retention defaults | Finance documents 7 years after fiscal year end; HR documents 7 years after end of engagement; CSR photos 3 years unless legal hold; audit events never purged. | `retention rules` | pending legal (PDPA) |
+
+## Prompt 1a assumptions (SRS gaps filled)
+
+| ID | Gap | Assumption |
+|---|---|---|
+| A-01 | SRS does not say who may invite users | OWN and HR may invite/edit users; only OWN may deactivate (`users.delete`). |
+| A-02 | AUD window granularity | Stored per user as `access_from`/`access_until` timestamps, set when the AUD role is granted; outside the window login is refused and live sessions are ended. |
+| A-03 | APP delegations | One row per (delegator, delegate, entity_type) with optional MYR ceiling and mandatory date window + reason; edits create a new version (DB trigger blocks in-place edits); revocation is a stamped column. |
+| A-04 | Password policy | Min 12 characters with letters and numbers; invitations expire in 7 days; reset links in 60 minutes. |
+| A-05 | Fiscal calendar | Calendar years 2026 and 2027 seeded with 12 monthly periods each (D-24). |
+| A-06 | Company bank account numbers | Encrypted at rest, masked to last 4 in every payload; full number only used server-side when rendering issued documents (Prompt 3). |
+| A-07 | Audit `actor_role` | Comma-joined role codes at the time of the event (a user may hold several roles). |
+| A-08 | Tax codes | SST 6%/8% items seeded inactive as placeholders; `NONE` is the only active tax code until the accountant confirms. |
 
 ## Pending legal review (PDPA 2010 / Amendment 2024)
 

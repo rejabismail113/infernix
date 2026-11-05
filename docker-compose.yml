@@ -1,0 +1,126 @@
+name: infernix-one
+
+x-app: &app
+  build:
+    context: .
+    dockerfile: docker/php/Dockerfile
+  image: infernix-one/app:dev
+  volumes:
+    - .:/var/www/html
+    - vendor:/var/www/html/vendor
+    - node_modules:/var/www/html/node_modules
+  env_file: .env
+  environment:
+    DB_HOST: postgres
+    REDIS_HOST: redis
+    AWS_ENDPOINT: http://minio:9000
+    MAIL_HOST: mailpit
+  depends_on:
+    postgres: { condition: service_healthy }
+    redis: { condition: service_healthy }
+    minio: { condition: service_healthy }
+  networks: [infernix]
+
+services:
+  app:
+    <<: *app
+    ports: ["8000:8000"]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/up"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  horizon:
+    <<: *app
+    command: php artisan horizon
+    healthcheck:
+      test: ["CMD", "php", "artisan", "horizon:status"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  scheduler:
+    <<: *app
+    command: php artisan schedule:work
+
+  vite:
+    image: node:22-bookworm
+    working_dir: /var/www/html
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    volumes:
+      - .:/var/www/html
+      - node_modules:/var/www/html/node_modules
+    ports: ["5173:5173"]
+    networks: [infernix]
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: infernix
+      POSTGRES_USER: infernix
+      POSTGRES_PASSWORD: infernix
+      TZ: Asia/Kuala_Lumpur
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
+    ports: ["5432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U infernix -d infernix"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [infernix]
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes: [redisdata:/data]
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [infernix]
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: infernix
+      MINIO_ROOT_PASSWORD: infernix-minio-secret
+    volumes: [miniodata:/data]
+    ports: ["9000:9000", "9001:9001"]
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [infernix]
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio: { condition: service_healthy }
+    environment:
+      MINIO_ROOT_USER: infernix
+      MINIO_ROOT_PASSWORD: infernix-minio-secret
+    entrypoint: ["/bin/sh", "/create-bucket.sh"]
+    volumes: ["./docker/minio/create-bucket.sh:/create-bucket.sh:ro"]
+    networks: [infernix]
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports: ["8025:8025", "1025:1025"]
+    networks: [infernix]
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:
+  vendor:
+  node_modules:
+
+networks:
+  infernix:

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 80" role="img" aria-label="Infernix Evolv">
+  <!-- PLACEHOLDER wordmark pending the real logo file (docs/reference/infernix-logo.jpg). Brand gradient #FF6A00 -> #FFA000. -->
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF6A00"/><stop offset="1" stop-color="#FFA000"/></linearGradient></defs>
+  <path d="M20 62 C10 40 30 18 48 12 C40 26 46 34 58 36 C52 44 44 52 48 68 C36 66 26 70 20 62 Z" fill="url(#g)"/>
+  <text x="80" y="42" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="700" fill="#111827">INFERNIX</text>
+  <text x="82" y="66" font-family="Inter, Arial, sans-serif" font-size="14" letter-spacing="6" fill="#111827">EVOLV</text>
+</svg>

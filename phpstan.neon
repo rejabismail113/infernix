@@ -1,0 +1,13 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 6
+    paths:
+        - app
+        - database
+        - routes
+        - bootstrap/providers.php
+    excludePaths:
+        - database/migrations/0001_01_01_000001_create_cache_table.php
+    treatPhpDocTypesAsCertain: false

@@ -67,7 +67,9 @@ final class PermissionService
             }
         }
         // Read-only roles can never hold write actions, regardless of matrix rows (AUD guard).
-        if ($best !== RecordScope::None && ! $action->isReadOnly() && $this->onlyReadOnlyRoles($user)) {
+        /** @var list<string> $exceptions */
+        $exceptions = config('infernix.read_only_role_write_exceptions', []);
+        if ($best !== RecordScope::None && ! $action->isReadOnly() && $this->onlyReadOnlyRoles($user) && ! in_array($resource, $exceptions, true)) {
             return RecordScope::None;
         }
 

@@ -122,6 +122,22 @@ final class DocumentService implements DocumentStore
         });
     }
 
+    public function hasLinked(string $entityType, int $entityId, string $linkType): bool
+    {
+        return EntityDocumentLink::query()->where('entity_type', $entityType)->where('entity_id', $entityId)->where('link_type', $linkType)
+            ->whereHas('document', fn ($q) => $q->whereNull('hard_deleted_at'))->exists();
+    }
+
+    public function linkedTo(string $entityType, int $entityId): array
+    {
+        return EntityDocumentLink::query()->where('entity_type', $entityType)->where('entity_id', $entityId)
+            ->whereHas('document', fn ($q) => $q->whereNull('hard_deleted_at'))
+            ->with(['document.currentVersion'])->orderBy('id')->get()
+            ->map(fn (EntityDocumentLink $l): array => [
+                'document_id' => $l->document_id, 'link_type' => $l->link_type, 'title' => $l->document->title, 'file_name' => $l->document->currentVersion?->file_name,
+            ])->values()->all();
+    }
+
     public function freeze(int $documentId, User $actor, string $reason): void
     {
         DB::transaction(function () use ($documentId, $actor, $reason): void {

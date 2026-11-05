@@ -43,8 +43,8 @@ Route::middleware(['web', 'app'])->prefix('admin')->name('admin.')->group(functi
 
     Route::get('fiscal-periods', [FiscalPeriodController::class, 'index'])->name('fiscal-periods.index');
     Route::post('fiscal-years', [FiscalPeriodController::class, 'storeYear'])->name('fiscal-years.store');
-    Route::post('fiscal-periods/{period}/lock', [FiscalPeriodController::class, 'lock'])->middleware(RequireRecentAuth::class)->name('fiscal-periods.lock');
-    Route::post('fiscal-periods/{period}/unlock', [FiscalPeriodController::class, 'unlock'])->middleware(RequireRecentAuth::class)->name('fiscal-periods.unlock');
+    Route::post('fiscal-periods/{period}/lock', [FiscalPeriodController::class, 'lock'])->middleware(RequireRecentAuth::class.':mfa')->name('fiscal-periods.lock');
+    Route::post('fiscal-periods/{period}/unlock', [FiscalPeriodController::class, 'unlock'])->middleware(RequireRecentAuth::class.':mfa')->name('fiscal-periods.unlock');
 
     Route::get('numbering', [NumberingController::class, 'index'])->name('numbering.index');
     Route::post('numbering', [NumberingController::class, 'store'])->name('numbering.store');

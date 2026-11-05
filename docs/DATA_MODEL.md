@@ -629,8 +629,7 @@ erDiagram
     bank_matches {
         bigint id PK
         bigint bank_transaction_id FK
-        varchar target_type "journal_line payment receipt"
-        bigint target_id
+        bigint journal_line_id FK "bank-account journal line (P1: 1:1)"
         numeric amount "18,4"
         varchar match_type "manual auto rule"
         bigint matched_by FK
@@ -641,10 +640,21 @@ erDiagram
 Legend: `UNIQUE(bills.vendor_id, vendor_invoice_no)` (M10-03); trigger `payment_allocations_ceiling`:
 `SUM(amount) per (target_type,target_id) ≤ target balance`; `CHECK(payment_allocations.amount > 0)`;
 `UNIQUE(payments.idempotency_key)`; `UNIQUE(bank_transactions.bank_account_id, fingerprint)`;
-`UNIQUE(bank_matches.target_type, target_id)` and `UNIQUE(bank_matches.bank_transaction_id, target_type,
-target_id)` (no double matching, M01-07); `CHECK(transactions.capitalization_class='OWNER_DRAWING' →
-payment_source='OWNER_PAID')`; claims state machine enforced in service + `CHECK(status IN (...))`;
-`claim_lines.rate_snapshot` frozen at submission.
+`UNIQUE(bank_matches.bank_transaction_id)` and `UNIQUE(bank_matches.journal_line_id)` (no double matching,
+M01-07; as built in Prompt 2 a match points at the bank-account journal line rather than a polymorphic target);
+`CHECK(transactions.capitalization_class='owner_drawing' → payment_source='direct_company')` (A-25: drawings are
+company money paid to the owner); claims state machine enforced in service + `CHECK(status IN (...))`;
+`claim_lines.rate_snapshot` frozen at submission; `claim_lines.clinical_note` encrypted at rest and only returned
+to HR/OWN/the claimant.
+
+**Approval history (Prompt 2).** `claim_approvals` keeps claim decisions; `approval_steps(entity_type, entity_id,
+level, approver_id, decision, owner_override, delegation_id, reason, decided_at)` keeps them for bills, payments and
+adjusting journals. `approval_matrices` / `approval_matrix_rules(min_amount, max_amount, level, approver_roles jsonb)`
+are versioned and PLACEHOLDER (D-15). `idempotency_keys(user_id, key, route, request_hash, response_status, response_location, created_at)`, unique per user + key + route, backs the
+`idempotent` middleware (§5.1).
+
+**Vendors (minimal, Prompt 2).** `vendors(name, registration_no, tax_no, email, phone, bank_reference encrypted,
+status)`; the rest of §9 procurement arrives in Prompt 5.
 
 ## 6. Commercial documents (M03) & CRM/Projects (M02)
 

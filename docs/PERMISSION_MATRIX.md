@@ -68,6 +68,12 @@ reason + re-auth); `approve` = legal hold. Classification gates apply on top (DE
 | bank accounts / transactions / matching | view create edit | view create edit | – | – | – | view export | – |
 | period close checklist | view approve(lock, MFA) | view approve(lock, MFA) | – | – | – | view | – |
 | finance reports & tax pack | view export | view export | project reports(S) | – | – | view export | – |
+| vendors (minimal master, Prompt 2) | view create edit | view create edit | view | – | – | view | – |
+
+Seeded resource keys: `chart_accounts`, `journals`, `transactions`, `tax_review`, `claims` (+ `reveal` for OWN/HR =
+clinical note), `bills`, `payments`, `bank`, `finance_reports`, `vendors`, plus `fiscal_periods` (approve = lock/unlock,
+needs TOTP re-auth). AUD stays read-only except `tax_review` (A-33). Staff see only their own claims (record scope O),
+enforced in the SQL query and the policy (UAT-01).
 
 ## M03 Commercial documents
 

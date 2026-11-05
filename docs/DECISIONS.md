@@ -34,7 +34,7 @@ deviations are `D-0x`.
 | D-12 | Owner capital / drawings | Owner-paid business expenses credit **Owner Current Account** (liability to owner); items classed `OWNER_DRAWING` debit **Owner Drawings** (equity) and are excluded from P&L and the expense-by-category report. Capital injections credit Owner Capital. | posting recipes + COA mapping in `settings` | pending accountant |
 | D-13 | Depreciation | Straight-line schedule table generated per asset; **posting of depreciation journals is behind `FEATURE_DEPRECIATION_POSTING=false`**. Capitalisation threshold default RM 2,000 (PLACEHOLDER); low-value equipment RM 200–2,000; below = consumable. | `settings: assets.capitalization_threshold`, `assets.low_value_threshold` | pending accountant |
 | D-14 | Tax treatment | Every expense defaults to `tax_treatment = pending_review`; only FIN/OWN/AUD may set deductible / non_deductible / capital. Tax pack lists all `pending_review` items as review flags. SST not applied by default (tax codes seeded: `NONE`, `SST-8`, `SST-6` as PLACEHOLDER, inactive). | `dictionary: tax_code` | pending accountant |
-| D-15 | Claim limits & rates | Mileage **RM 0.60/km**, per-diem **RM 50/day**, medical cap **RM 500/yr** — all PLACEHOLDER; receipt mandatory for every claim type except mileage; approval thresholds: ≤RM 500 PM/HR, ≤RM 5,000 FIN, above FIN + OWN. | `claim_types`, `claim_type_rates`, `approval_matrices` | pending owner |
+| D-15 | Claim limits & rates | Mileage **RM 0.60/km**, per-diem **RM 50/day**, medical cap **RM 500/yr** — all PLACEHOLDER; receipt mandatory for every claim type except mileage; approval thresholds (as seeded in Prompt 2): ≤RM 5,000 one approver (FIN or OWN); above RM 5,000 a second, different approver at level 2 (OWN). Same matrix shape for claims, bills, payments and adjusting journals; delegation lets an APP approve within a ceiling. | `claim_types`, `claim_type_rates`, `approval_matrices` | pending owner |
 | D-16 | Roles | Exactly the 7 roles OWN/FIN/PM/HR/STF/AUD/APP; per-action permissions seeded from `docs/PERMISSION_MATRIX.md`; Owner exception = maker-checker override with mandatory reason, audited. | `permissions`, `approval_matrices` | pending owner |
 | D-17 | Source of truth / infra | PostgreSQL 16 + MinIO (S3 API) in dev; production = managed Postgres + S3-compatible bucket in the `ap-southeast-1` (Singapore) region or a Malaysian provider, single VPS Docker Compose as the baseline deployment (docs/DEPLOYMENT.md, Prompt 6). | `.env` | pending owner |
 | D-18 | Vault product | `VaultClient` interface with `NullVault` (dev: shows vault reference + deep link only). Adapters for **Bitwarden Secrets Manager** and **1Password Connect** behind `VAULT_DRIVER`. No in-house secret storage, ever. | `VAULT_DRIVER` | pending owner |
@@ -87,6 +87,23 @@ deviations are `D-0x`.
 | A-21 | Fonts | No external font CDN: the system font stack is used (Inter when installed locally). Avoids third-party requests from an internal finance system and works offline. |
 | A-22 | Table preferences | Column visibility and density are remembered per table in the viewer's browser (`localStorage`) — a convenience only; sorting, filtering and paging are always done by the server for paged lists. |
 | A-23 | Error pages | Browser requests get an Inertia error page (403, 404, 429, 500/503 when debug is off) with the original status code; JSON clients keep JSON errors. |
+
+## Prompt 2 assumptions (Finance core)
+
+| ID | Gap | Assumption |
+|---|---|---|
+| A-24 | Staff-paid expenses | `STAFF_PAID_REIMBURSABLE` cannot be recorded in the expense register; it must go through a claim, so a staff cost hits the ledger exactly once (at claim approval). |
+| A-25 | Owner-paid / drawings | Owner-paid business costs credit **Owner Current Account**. `OWNER_DRAWING` items must be paid by the company (`DIRECT_COMPANY`) and debit Owner Drawings; a DB `CHECK` enforces it. Drawings never appear in P&L or expenses-by-category. |
+| A-26 | Capital purchases | `capitalization_class = capital_asset` posts Dr Fixed Assets with no expense line and emits `AssetQualifyingPurchaseRecorded` for M05 (Prompt 5) to create the asset by reference. |
+| A-27 | Non-sales inflows | Capital injections, loans and refunds post to balance-sheet accounts (Owner Capital, Loans Payable, the original expense account) and are excluded from revenue. |
+| A-28 | Adjusting journals | Manual journals are drafts with a temporary `DRAFT-…` number; the gap-free `JV-` number is allocated only when the draft is approved and posted (maker-checker via the `journal` matrix). |
+| A-29 | Bank matching | P1 matching is 1:1 between a statement line and a bank journal line (unique on both sides in `bank_matches`); suggestions are same amount within ±3 days. Split matching is P4. |
+| A-30 | Cash-basis P&L | Indicative only: direct bank-settled journals plus payables (bills/claims) pro-rated by the amount actually paid in the range. The accountant's tax computation remains authoritative. |
+| A-31 | AR ageing | Shown empty until M03 invoices exist (Prompt 3); the report checks for the table rather than failing. |
+| A-32 | Period lock strength | Locking/unlocking a period requires re-confirmation with the authenticator (TOTP), not just a password. |
+| A-33 | Auditor tax review | AUD is read-only except for setting `tax_treatment` (config `read_only_role_write_exceptions = ['tax_review']`), so the external accountant can classify items without other write access. |
+| A-34 | Payment voucher | A basic DomPDF voucher is generated on posting, stored in the Document Centre as the payment's `issued_document` and frozen. Template styling and signatory blocks come with M03 templates (Prompt 3). |
+| A-35 | Vendors | A minimal vendor master (name, SSM/tax no., contact, encrypted + masked bank reference) is created now so bills can reference it; the full procurement flow is Prompt 5. Duplicate vendor invoice numbers are blocked by a unique index (M10-03). |
 
 ## Pending legal review (PDPA 2010 / Amendment 2024)
 

@@ -45,9 +45,9 @@ it('resolves dictionary items by effective date', function (): void {
 
 it('masks company bank account numbers in the UI payload', function (): void {
     $owner = ownerUser();
-    actingAsSatisfied($owner)->post(route('admin.company.bank-accounts.store'), ['bank_name' => 'Maybank', 'account_no' => '514012345678', 'account_name' => 'Infernix Evolv Hub'])->assertSessionHasNoErrors();
+    actingAsSatisfied($owner)->post(route('admin.company.bank-accounts.store'), ['bank_name' => 'CIMB', 'account_no' => '514012345678', 'account_name' => 'Infernix Evolv Hub'])->assertSessionHasNoErrors();
     $page = actingAsSatisfied($owner)->get(route('admin.company.edit'))->assertOk();
     $accounts = $page->viewData('page')['props']['bankAccounts'];
-    expect($accounts[0]['account_no_masked'])->toBe('********5678')
+    expect(collect($accounts)->firstWhere('bank_name', 'CIMB')['account_no_masked'])->toBe('********5678')
         ->and(json_encode($accounts))->not->toContain('514012345678');
 })->group('M04-06', 'NFR-07', 'G-03');

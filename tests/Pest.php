@@ -6,11 +6,18 @@ use App\Kernel\Documents\LinkTarget;
 use App\Kernel\Identity\Http\Middleware\EnsureMfa;
 use App\Kernel\Identity\Http\Middleware\RequireRecentAuth;
 use App\Kernel\Identity\Models\User;
+use App\Kernel\Money\Money;
+use App\Modules\Administration\Models\DictionaryItem;
 use App\Modules\DocumentCentre\Models\Document;
 use App\Modules\DocumentCentre\Services\DocumentService;
+use App\Modules\Finance\Models\BankAccount;
+use App\Modules\Finance\Models\ChartAccount;
+use App\Modules\Finance\Models\Transaction;
+use App\Modules\Finance\Services\TransactionService;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ViewErrorBag;
 use Tests\Support\Files;
 use Tests\TestCase;
@@ -37,6 +44,49 @@ function storeDocument(User $owner, array $meta = [], ?LinkTarget $link = null, 
     $stored = app(DocumentService::class)->attach($file ?? Files::pdf(), $owner, $meta, $link);
 
     return Document::query()->findOrFail($stored->documentId);
+}
+
+/** The seeded company bank account (finance view). */
+function bank(): BankAccount
+{
+    return BankAccount::query()->with(['companyAccount', 'glAccount'])->firstOrFail();
+}
+
+function account(string $systemKeyOrCode): ChartAccount
+{
+    return ChartAccount::query()->where('system_key', $systemKeyOrCode)->orWhere('code', $systemKeyOrCode)->firstOrFail();
+}
+
+function categoryId(string $code): int
+{
+    return (int) DictionaryItem::query()->whereRelation('dictionary', 'code', 'expense_category')->where('code', $code)->value('id');
+}
+
+/** Net debit − credit on an account across posted/reversed journals, as a decimal string. */
+function balanceOf(string $systemKeyOrCode): string
+{
+    $id = account($systemKeyOrCode)->id;
+    $r = DB::table('journal_lines')->join('journals', 'journals.id', '=', 'journal_lines.journal_id')
+        ->where('account_id', $id)->where('journals.status', '!=', 'draft')->selectRaw('COALESCE(SUM(debit),0)-COALESCE(SUM(credit),0) AS b')->first();
+
+    return (string) Money::fromDb((string) $r->b)->getAmount();
+}
+
+/**
+ * Create and post an expense/income register entry through the real service.
+ *
+ * @param  array<string, mixed>  $overrides
+ */
+function postedTransaction(array $overrides = [], ?User $actor = null): Transaction
+{
+    $actor ??= ownerUser();
+    $svc = app(TransactionService::class);
+    $t = $svc->create(array_merge([
+        'direction' => 'outflow', 'payment_source' => 'DIRECT_COMPANY', 'capitalization_class' => 'EXPENSE', 'transaction_date' => today()->toDateString(),
+        'bank_account_id' => bank()->id, 'description' => 'Test expense', 'lines' => [['description' => 'Printer paper', 'amount' => '100.00', 'category_id' => categoryId('office')]],
+    ], $overrides), $actor);
+
+    return $svc->post($t, $actor);
 }
 
 /** Assert the session has a validation error for $key whose message contains $needle. */
@@ -75,5 +125,6 @@ function actingAsSatisfied(User $user): TestCase
     return $tc->actingAs($user)->withSession([
         EnsureMfa::SESSION_KEY => now()->toIso8601String(),
         RequireRecentAuth::SESSION_KEY => now()->toIso8601String(),
+        RequireRecentAuth::MFA_SESSION_KEY => now()->toIso8601String(),
     ]);
 }

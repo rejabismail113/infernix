@@ -31,6 +31,7 @@ final class ReauthController
 
         return Inertia::render('Auth/Reauth', [
             'mfaEnabled' => $user->mfaEnabled(),
+            'mfaRequired' => (bool) $request->session()->get('reauth.require_mfa', false),
             'intended' => $request->query('intended'),
         ]);
     }
@@ -45,17 +46,22 @@ final class ReauthController
             'intended' => ['nullable', 'string'],
         ]);
 
-        $ok = ($data['code'] ?? null) !== null && $user->mfaEnabled()
-            ? $this->mfa->verify($user, $data['code'])
-            : (($data['password'] ?? null) !== null && Hash::check($data['password'], $user->password));
+        $viaMfa = ($data['code'] ?? null) !== null && $user->mfaEnabled();
+        $ok = $viaMfa
+            ? $this->mfa->verify($user, (string) $data['code'])
+            : (($data['password'] ?? null) !== null && Hash::check((string) $data['password'], $user->password));
+        if ($ok && ! $viaMfa && $request->session()->get('reauth.require_mfa')) {
+            throw ValidationException::withMessages(['code' => __('This action needs your authenticator code.')]);
+        }
 
         if (! $ok) {
             Audit::log('reauth_failed', $user, null, null, null, null, $user);
             throw ValidationException::withMessages(['password' => __('Verification failed.')]);
         }
 
-        RequireRecentAuth::confirm($request);
-        Audit::log('reauth', $user, null, null, null, null, $user);
+        RequireRecentAuth::confirm($request, $viaMfa);
+        $request->session()->forget('reauth.require_mfa');
+        Audit::log('reauth', $user, null, null, ['via' => $viaMfa ? 'mfa' : 'password'], null, $user);
 
         $intended = $data['intended'] ?? null;
 

@@ -118,7 +118,8 @@ final class DocumentController
             throw ValidationException::withMessages(['file' => $e->getMessage()]);
         }
 
-        return redirect()->route('documents.show', $stored->documentId)->with('success', __('Document uploaded.'));
+        // Module pages (claims, bills…) attach evidence in place and stay on their own page.
+        return ($request->boolean('stay') ? back() : redirect()->route('documents.show', $stored->documentId))->with('success', __('Document uploaded.'));
     }
 
     public function show(Request $request, Document $document): Response

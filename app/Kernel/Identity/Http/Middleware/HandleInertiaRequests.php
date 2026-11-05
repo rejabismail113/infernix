@@ -18,6 +18,17 @@ final class HandleInertiaRequests extends Middleware
     {
         $p = app(PermissionService::class);
         $items = [
+            ['Finance overview', 'finance.overview', 'claims', 'view', 'Finance', 'chart'],
+            ['Claims', 'finance.claims.index', 'claims', 'view', 'Finance', 'audit'],
+            ['Expenses & income', 'finance.transactions.index', 'transactions', 'view', 'Finance', 'swap'],
+            ['Bills', 'finance.bills.index', 'bills', 'view', 'Finance', 'document'],
+            ['Payments', 'finance.payments.index', 'payments', 'view', 'Finance', 'upload'],
+            ['Bank', 'finance.bank.index', 'bank', 'view', 'Finance', 'building'],
+            ['Journals', 'finance.journals.index', 'journals', 'view', 'Finance', 'list'],
+            ['Chart of accounts', 'finance.accounts.index', 'chart_accounts', 'view', 'Finance', 'hash'],
+            ['Period close', 'finance.periods.index', 'fiscal_periods', 'view', 'Finance', 'lock'],
+            ['Finance reports', 'finance.reports.index', 'finance_reports', 'view', 'Finance', 'report'],
+            ['Vendors', 'procurement.vendors.index', 'vendors', 'view', 'Procurement', 'users'],
             ['Documents', 'documents.index', 'documents', 'view', 'Documents', 'document'],
             ['Document reports', 'documents.reports.inventory', 'documents', 'view', 'Documents', 'report'],
             ['Users', 'admin.users.index', 'users', 'view', 'Administration', 'users'],
@@ -62,6 +73,7 @@ final class HandleInertiaRequests extends Middleware
             'flash' => fn () => [
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),
+                'import' => $request->session()->get('import'),
             ],
         ];
     }

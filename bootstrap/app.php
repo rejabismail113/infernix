@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Kernel\Http\Idempotent;
 use App\Kernel\Identity\Http\Middleware\EnsureMfa;
 use App\Kernel\Identity\Http\Middleware\EnsureUserIsActive;
 use App\Kernel\Identity\Http\Middleware\HandleInertiaRequests;
@@ -31,6 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'active' => EnsureUserIsActive::class,
             'mfa' => EnsureMfa::class,
             'recent-auth' => RequireRecentAuth::class,
+            'idempotent' => Idempotent::class,
         ]);
         // 'app' = authenticated, active (not deactivated / within AUD window), MFA satisfied.
         $middleware->group('app', ['auth', EnsureUserIsActive::class, EnsureMfa::class]);

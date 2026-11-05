@@ -104,6 +104,11 @@ The kernel is the only code every module may depend on. It never depends on a mo
 | `ReportExported` | M11/any | Audit |
 | `BackupCompleted`, `BackupFailed` | ops | M12 backup status, alerts |
 
+Implemented so far (Prompt 2): `JournalPosted`, `JournalReversed`, `ExpenseRecorded`,
+`AssetQualifyingPurchaseRecorded`, `ClaimApproved`, `ClaimPaid`, `BillApproved`, `PaymentPosted` (all dispatched
+after commit). Claim submission/rejection, bank import and matching are recorded in the audit trail; their events are
+added when a consumer needs them (Prompt 3 notifications).
+
 ## 5. Request lifecycle & cross-cutting
 
 - **Auth**: session (web) + MFA (TOTP) enforced for OWN/FIN; `RequireRecentAuth` on sensitive actions

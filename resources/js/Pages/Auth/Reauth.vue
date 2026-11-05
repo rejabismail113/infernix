@@ -3,7 +3,7 @@ import { Head, useForm } from '@inertiajs/vue3';
 import FormField from '@/Components/FormField.vue';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 
-const props = defineProps<{ mfaEnabled: boolean; intended: string | null }>();
+const props = defineProps<{ mfaEnabled: boolean; mfaRequired?: boolean; intended: string | null }>();
 const form = useForm({ password: '', code: '', intended: props.intended ?? '' });
 </script>
 
@@ -14,7 +14,12 @@ const form = useForm({ password: '', code: '', intended: props.intended ?? '' })
             Confirm it's you
         </h1>
         <p class="mb-6 text-sm text-surface-600">
-            This action is sensitive. Re-enter your password<span v-if="mfaEnabled"> or an authenticator code</span> to continue.
+            <template v-if="mfaRequired">
+                This action needs your authenticator code.
+            </template>
+            <template v-else>
+                This action is sensitive. Re-enter your password<span v-if="mfaEnabled"> or an authenticator code</span> to continue.
+            </template>
         </p>
         <form
             class="space-y-4"

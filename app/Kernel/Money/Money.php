@@ -43,6 +43,18 @@ final class Money
         return BrickMoney::zero(self::CURRENCY);
     }
 
+    /** "1234567.5" → "1,234,567.50" using string/decimal maths only (no floats, even for display). */
+    public static function format(BrickMoney|string $value): string
+    {
+        $dec = $value instanceof BrickMoney ? $value->getAmount() : BigDecimal::of($value);
+        $dec = $dec->toScale(2, RoundingMode::HALF_UP);
+        $negative = $dec->isNegative();
+        [$whole, $frac] = explode('.', (string) $dec->abs());
+        $grouped = (string) preg_replace('/\B(?=(\d{3})+(?!\d))/', ',', $whole);
+
+        return ($negative ? '-' : '').$grouped.'.'.$frac;
+    }
+
     public static function minorUnits(BrickMoney $money): int
     {
         return $money->getMinorAmount()->toInt();

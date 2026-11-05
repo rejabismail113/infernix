@@ -33,3 +33,20 @@ arch('modules never reach into another module\'s Models or Services directly (ev
 arch('journals are only created through the PostingService (M01-06)')
     ->expect('App\Modules')
     ->not->toUse('App\Modules\Finance\Models\Journal::create');
+
+it('writes journals and journal lines only inside PostingService (M01-06)', function (): void {
+    $pattern = '/table\(\s*[\'"]journal(s|_lines)[\'"]\s*\)[^;]*->(insert|update|delete|upsert)'
+        .'|Journal(Line)?::(query\(\)->)?(create|forceCreate|insert|upsert|updateOrCreate|firstOrCreate)\b'
+        .'|new\s+Journal(Line)?\s*\('
+        .'|(INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+journal(s|_lines)\b/i';
+    $offenders = [];
+    foreach ((new Finder)->files()->in(base_path('app'))->name('*.php') as $file) {
+        if ($file->getFilename() === 'PostingService.php') {
+            continue;
+        }
+        if (preg_match($pattern, $file->getContents()) === 1) {
+            $offenders[] = $file->getRelativePathname();
+        }
+    }
+    expect($offenders)->toBe([]);
+})->group('M01-06', 'UAT-05');

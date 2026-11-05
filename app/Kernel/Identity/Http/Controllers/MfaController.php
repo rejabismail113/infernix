@@ -47,7 +47,7 @@ final class MfaController
             throw ValidationException::withMessages(['code' => $e->getMessage()]);
         }
         $request->session()->put(EnsureMfa::SESSION_KEY, now()->toIso8601String());
-        RequireRecentAuth::confirm($request);
+        RequireRecentAuth::confirm($request, true);
 
         return Inertia::render('Auth/MfaRecoveryCodes', ['codes' => $codes]);
     }
@@ -70,7 +70,7 @@ final class MfaController
             throw ValidationException::withMessages(['code' => __('Invalid authentication code.')]);
         }
         $request->session()->put(EnsureMfa::SESSION_KEY, now()->toIso8601String());
-        RequireRecentAuth::confirm($request);
+        RequireRecentAuth::confirm($request, true);
 
         return redirect()->intended(route('dashboard'));
     }

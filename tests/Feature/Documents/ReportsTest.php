@@ -21,7 +21,8 @@ it('missing-evidence report lists records lacking required documents, honours ro
     $ssm = $rows->firstWhere('link_type', 'ssm_registration');
     expect($ssm['status'])->toBe('missing')
         ->and(collect($ssm['missing'])->pluck('entity_id')->all())->toBe([$company->id])
-        ->and($rows->firstWhere('entity_type', 'claim_line')['status'])->toBe('pending_module');
+        ->and($rows->firstWhere('entity_type', 'asset')['status'])->toBe('pending_module')
+        ->and($rows->firstWhere('entity_type', 'claim_line')['status'])->toBe('complete');
 
     // STF cannot see the company record, so nothing about it is reported to them.
     $staffRows = collect(actingAsSatisfied(userWithRoles('STF'))->get(route('documents.reports.missing-evidence'))->assertOk()->viewData('page')['props']['rows']);

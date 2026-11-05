@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Procurement;
 
+use App\Modules\Procurement\Models\Vendor;
+use App\Modules\Procurement\Policies\VendorPolicy;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -25,5 +28,6 @@ final class ProcurementServiceProvider extends ServiceProvider
     {
         $this->loadMigrationsFrom(__DIR__.'/Database/Migrations');
         $this->loadRoutesFrom(__DIR__.'/Routes/web.php');
+        Gate::policy(Vendor::class, VendorPolicy::class);
     }
 }

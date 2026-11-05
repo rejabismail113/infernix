@@ -11,6 +11,8 @@ use App\Modules\Administration\Database\Seeders\NotificationRuleSeeder;
 use App\Modules\Administration\Database\Seeders\NumberingSequenceSeeder;
 use App\Modules\DocumentCentre\Database\Seeders\RequiredEvidenceRuleSeeder;
 use App\Modules\DocumentCentre\Database\Seeders\RetentionRuleSeeder;
+use App\Modules\Finance\Database\Seeders\ChartOfAccountsSeeder;
+use App\Modules\Finance\Database\Seeders\FinanceSetupSeeder;
 use Illuminate\Database\Seeder;
 
 final class DatabaseSeeder extends Seeder
@@ -28,6 +30,8 @@ final class DatabaseSeeder extends Seeder
             NotificationRuleSeeder::class,
             RetentionRuleSeeder::class,
             RequiredEvidenceRuleSeeder::class,
+            ChartOfAccountsSeeder::class,
+            FinanceSetupSeeder::class,
         ]);
     }
 }

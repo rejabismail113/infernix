@@ -64,7 +64,7 @@ return [
             'report' => false,
         ],
 
-        // Local private fallback for environments without MinIO (never under /public).
+        // Local private fallback for environments without an S3 object store (never under /public).
         'documents_local' => [
             'driver' => 'local',
             'root' => storage_path('app/private/documents'),

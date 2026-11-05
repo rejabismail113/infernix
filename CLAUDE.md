@@ -15,11 +15,11 @@ code, tests or docs (`docs/TRACEABILITY.md`).
 | DB | PostgreSQL 16 — the single authoritative transactional DB. Tests run against real Postgres (triggers are part of the rules). |
 | Queue/cache | Redis + Laravel Horizon; `schedule:work` container for the scheduler |
 | Frontend | Inertia.js v2 + Vue 3 + TypeScript + Tailwind; PrimeVue 4 for data tables/dialogs/forms |
-| Files | S3-compatible **private** object storage (MinIO in dev), disk `documents`. Nothing under `/public`. |
+| Files | S3-compatible **private** object storage (RustFS in dev, see D-17), disk `documents`. Nothing under `/public`. |
 | PDF | Browsershot (headless Chromium) rendering Blade/HTML; DomPDF fallback (`PDF_DRIVER`) |
 | Money | `brick/money` in PHP, `NUMERIC(18,4)` in Postgres, decimal strings / integer minor units on the client |
 | Quality | Pest 3, Larastan level 6, Pint (laravel preset + strict types), Vitest, ESLint, vue-tsc |
-| Dev env | Docker Compose: app, horizon, scheduler, vite, postgres, redis, minio, mailpit |
+| Dev env | Docker Compose: app, horizon, scheduler, vite, postgres, redis, objectstore (RustFS), mailpit |
 | Locale | Timezone `Asia/Kuala_Lumpur`, base currency MYR, EN labels with BM-ready i18n keys |
 
 ## The 12 non-negotiable engineering rules

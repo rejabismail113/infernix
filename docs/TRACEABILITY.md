@@ -54,7 +54,7 @@ Status values: `todo`, `partial`, `done`, `deferred (reason)`. Updated in the sa
 | M05-04 | Track disposals and audit complete financial impacts through ledger process. | P2 | P3 | 5 | todo | Assets |  |
 | M05-05 | Store receipts and warranty documents. | P1 | P3 | 5 | partial (Finance side: capital purchase posts Dr Fixed Assets, no expense, emits AssetQualifyingPurchaseRecorded) | Assets | tests/Feature/Finance/RegistersAndPeriodsTest.php |
 | M06-01 | Allow files linked to project, finance, staff, asset, CSR and company. | P0 | P1 | 1b | done (user + company linkable; other modules register their types) | DocumentCentre | tests/Feature/Documents/{LifecycleTest,UploadValidationTest}.php |
-| M06-02 | Prevent direct public access; download via authorized time-limited links. | P0 | P1 | 1b | done | DocumentCentre | tests/Feature/Documents/DownloadSecurityTest.php |
+| M06-02 | Prevent direct public access; download via authorized time-limited links. | P0 | P1 | 1b | done | DocumentCentre | tests/Feature/Documents/DownloadSecurityTest.php, tests/Feature/Console/EnsureDocumentsBucketTest.php |
 | M06-03 | Version and audit files; no silent overwrite of issued documents. | P0 | P1 | 1b | done | DocumentCentre | tests/Feature/Documents/{VersioningTest,UploadValidationTest}.php |
 | M06-04 | Support metadata search P0 but enforce row permissions. |  | P1 | 1b | done | DocumentCentre | tests/Feature/Documents/{SearchSecurityTest,ReportsTest}.php |
 | M06-05 | Configurable retention rules and legal hold; no permanent delete without authority. | P1 | P1 | 1b | done | DocumentCentre | tests/Feature/Documents/{LifecycleTest,DownloadSecurityTest}.php |

@@ -13,7 +13,7 @@ make setup
 ```
 
 App: <http://localhost:8010> (host port from `APP_PORT` in `.env`; change it if 8010 is taken) ·
-Mailpit: <http://localhost:8025> · MinIO console: <http://localhost:9001> · Horizon: <http://localhost:8010/horizon>
+Mailpit: <http://localhost:8025> · Object store console (RustFS): <http://localhost:9001> · Horizon: <http://localhost:8010/horizon>
 
 Seeded Owner login: `owner@infernix.local` / `ChangeMe-Infernix-2026!` (from `SEED_OWNER_*` in `.env`;
 change before any shared deployment).

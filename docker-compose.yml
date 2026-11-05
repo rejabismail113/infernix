@@ -13,12 +13,12 @@ x-app: &app
   environment:
     DB_HOST: postgres
     REDIS_HOST: redis
-    AWS_ENDPOINT: http://minio:9000
+    AWS_ENDPOINT: http://objectstore:9000
     MAIL_HOST: mailpit
   depends_on:
     postgres: { condition: service_healthy }
     redis: { condition: service_healthy }
-    minio: { condition: service_healthy }
+    objectstore: { condition: service_healthy }
   networks: [infernix]
 
 services:
@@ -84,31 +84,25 @@ services:
       retries: 20
     networks: [infernix]
 
-  minio:
-    image: minio/minio:latest
-    command: server /data --console-address ":9001"
+  # S3-compatible private object store for the `documents` disk. MinIO's images were removed from Docker Hub,
+  # so dev uses RustFS (Apache-2.0, S3 API). Pinned tag; override with OBJECTSTORE_IMAGE. The bucket is created by
+  # `php artisan storage:ensure-bucket` (make setup), so no vendor CLI image is needed. See DECISIONS D-17.
+  objectstore:
+    image: ${OBJECTSTORE_IMAGE:-rustfs/rustfs:1.0.4}
     environment:
-      MINIO_ROOT_USER: infernix
-      MINIO_ROOT_PASSWORD: infernix-minio-secret
-    volumes: [miniodata:/data]
+      RUSTFS_ACCESS_KEY: ${AWS_ACCESS_KEY_ID:-infernix}
+      RUSTFS_SECRET_KEY: ${AWS_SECRET_ACCESS_KEY:-infernix-minio-secret}
+      RUSTFS_CONSOLE_ENABLE: "true"
+    volumes: [objectdata:/data]
     ports: ["9000:9000", "9001:9001"]
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    networks: [infernix]
-
-  minio-init:
-    image: minio/mc:latest
-    depends_on:
-      minio: { condition: service_healthy }
-    environment:
-      MINIO_ROOT_USER: infernix
-      MINIO_ROOT_PASSWORD: infernix-minio-secret
-    entrypoint: ["/bin/sh", "/create-bucket.sh"]
-    volumes: ["./docker/minio/create-bucket.sh:/create-bucket.sh:ro"]
-    networks: [infernix]
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      infernix:
+        aliases: [minio] # keeps older .env files (AWS_ENDPOINT=http://minio:9000) working
 
   mailpit:
     image: axllent/mailpit:latest
@@ -118,7 +112,7 @@ services:
 volumes:
   pgdata:
   redisdata:
-  miniodata:
+  objectdata:
   vendor:
   node_modules:
 

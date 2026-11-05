@@ -3,6 +3,8 @@
 SHELL := /bin/bash
 DC    := docker compose
 APP   := $(DC) exec -T app
+# One-off container: works before vendor/ exists (the long-running app container needs vendor/ to start).
+RUN   := $(DC) run --rm --no-deps -T app
 
 .PHONY: help up down setup fresh seed migrate test test-php test-js lint lint-php lint-js stan pint fix ci logs shell
 
@@ -17,9 +19,11 @@ down: ## Stop containers
 
 setup: ## First-time setup: env, deps, key, migrate, seed, build assets
 	@test -f .env || cp .env.example .env
-	$(DC) up -d --build
-	$(APP) composer install --no-interaction --prefer-dist
-	$(APP) php artisan key:generate --force --no-interaction
+	$(DC) build app
+	$(RUN) composer install --no-interaction --prefer-dist
+	@grep -qE '^APP_KEY=.+' .env || $(RUN) php artisan key:generate --force --no-interaction
+	$(DC) up -d
+	$(DC) up -d --wait --wait-timeout 180 app
 	$(APP) php artisan storage:ensure-bucket --no-interaction
 	$(APP) php artisan migrate --force --no-interaction
 	$(APP) php artisan db:seed --force --no-interaction

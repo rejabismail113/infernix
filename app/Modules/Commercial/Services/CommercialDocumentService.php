@@ -214,15 +214,17 @@ final class CommercialDocumentService
                 $fields['settlement_status'] = SettlementStatus::Unpaid;
                 $fields['lines_snapshot']['extra']['terms_days'] = (string) $days;
             }
-            $doc->forceFill($fields)->save();
-
+            // Post first, then write the issued row once (issued rows are immutable apart from settlement fields).
             if ($doc instanceof Invoice) {
-                $doc->forceFill(['journal_id' => $this->ledger->postInvoice($doc->id, $number, $doc->counterpartyName(), $date, $this->postingLines($doc), $actor, $doc->project_id)])->save();
+                $fields['journal_id'] = $this->ledger->postInvoice($doc->id, $number, (string) ($client['name'] ?? ''), $date, $this->postingLines($doc), $actor, $doc->project_id);
             }
+            $invoice = null;
             if ($doc instanceof CreditNote) {
                 $invoice = $this->assertCreditable($doc);
-                $journalId = $this->ledger->postCreditNote($doc->id, $number, (string) $invoice->document_no, $date, $this->postingLines($doc), $actor, $invoice->project_id);
-                $doc->forceFill(['journal_id' => $journalId])->save();
+                $fields['journal_id'] = $this->ledger->postCreditNote($doc->id, $number, (string) $invoice->document_no, $date, $this->postingLines($doc), $actor, $invoice->project_id);
+            }
+            $doc->forceFill($fields)->save();
+            if ($invoice !== null) {
                 CreditNoteAllocation::query()->create(['credit_note_id' => $doc->id, 'invoice_id' => $invoice->id, 'amount' => $doc->total]);
                 $this->settle($invoice->id);
             }

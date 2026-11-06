@@ -9,5 +9,6 @@ export interface SharedProps {
     app: { name: string; company: { name: string; tagline: string }; currency: string; timezone: string };
     flash: { success: string | null; error: string | null };
     nav: { label: string; href: string; group: string; icon: string }[];
+    notifications?: { unread: number };
     [key: string]: unknown;
 }

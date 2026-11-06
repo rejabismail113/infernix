@@ -8,6 +8,7 @@ use App\Kernel\Identity\Http\Controllers\InvitationAcceptController;
 use App\Kernel\Identity\Http\Controllers\MfaController;
 use App\Kernel\Identity\Http\Controllers\PasswordResetController;
 use App\Kernel\Identity\Http\Controllers\ReauthController;
+use App\Kernel\Notifications\Http\NotificationController;
 use Illuminate\Support\Facades\Route;
 
 /** @see SRS G-01 */
@@ -36,5 +37,8 @@ Route::middleware('web')->group(function (): void {
         Route::get('/', DashboardController::class)->name('dashboard');
         Route::get('/reauth', [ReauthController::class, 'show'])->name('reauth.show');
         Route::post('/reauth', [ReauthController::class, 'store'])->middleware('throttle:10,1')->name('reauth.store');
+        Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+        Route::get('/notifications/{notification}/open', [NotificationController::class, 'open'])->whereUuid('notification')->name('notifications.open');
+        Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
     });
 });

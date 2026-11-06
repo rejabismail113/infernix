@@ -42,6 +42,7 @@
         <env name="SESSION_DRIVER" value="array"/>
         <env name="VAULT_DRIVER" value="null"/>
         <env name="DOCUMENT_SCANNER" value="null"/>
+        <env name="PDF_DRIVER" value="dompdf"/>
         <env name="SECRET_SENTINEL" value="SENTINEL-DO-NOT-LEAK-9f3a7c1e"/>
         <env name="SEED_OWNER_PASSWORD" value="test-owner-password"/>
     </php>

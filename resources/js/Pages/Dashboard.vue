@@ -22,12 +22,12 @@ const page = usePage<SharedProps>();
                 {{ company.tagline }}
             </p>
             <p class="mt-4 text-sm text-surface-600">
-                Owner and finance dashboards arrive with the finance modules. Use the shortcuts below for what is available today.
+                Everything you have access to is below. The owner and finance dashboards show revenue, cash, costs and what is outstanding.
             </p>
         </Card>
         <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <Link
-                v-for="item in (page.props.nav ?? []).filter((n) => n.group !== 'Overview')"
+                v-for="item in (page.props.nav ?? []).filter((n) => n.href !== route('dashboard'))"
                 :key="item.href"
                 :href="item.href"
                 class="flex items-center gap-3 rounded-lg border border-surface-200 bg-white p-4 text-sm font-medium hover:border-brand-300 hover:bg-brand-50"

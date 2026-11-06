@@ -18,6 +18,15 @@ final class HandleInertiaRequests extends Middleware
     {
         $p = app(PermissionService::class);
         $items = [
+            ['Owner dashboard', 'reports.dashboard.owner', 'dashboard_owner', 'view', 'Overview', 'chart'],
+            ['Finance dashboard', 'reports.dashboard.finance', 'dashboard_finance', 'view', 'Overview', 'chart'],
+            ['Clients', 'projects.clients.index', 'clients', 'view', 'Sales', 'users'],
+            ['Quotations', 'commercial.quotations.index', 'quotations', 'view', 'Sales', 'document'],
+            ['Invoices', 'commercial.invoices.index', 'invoices', 'view', 'Sales', 'document'],
+            ['Credit notes', 'commercial.credit-notes.index', 'credit_notes', 'view', 'Sales', 'swap'],
+            ['Receipts', 'commercial.receipts.index', 'receipts', 'view', 'Sales', 'download'],
+            ['Projects', 'projects.projects.index', 'projects', 'view', 'Sales', 'list'],
+            ['Document templates', 'commercial.templates.index', 'document_templates', 'view', 'Sales', 'settings'],
             ['Finance overview', 'finance.overview', 'claims', 'view', 'Finance', 'chart'],
             ['Claims', 'finance.claims.index', 'claims', 'view', 'Finance', 'audit'],
             ['Expenses & income', 'finance.transactions.index', 'transactions', 'view', 'Finance', 'swap'],
@@ -29,6 +38,7 @@ final class HandleInertiaRequests extends Middleware
             ['Period close', 'finance.periods.index', 'fiscal_periods', 'view', 'Finance', 'lock'],
             ['Finance reports', 'finance.reports.index', 'finance_reports', 'view', 'Finance', 'report'],
             ['Vendors', 'procurement.vendors.index', 'vendors', 'view', 'Procurement', 'users'],
+            ['Export Centre', 'reports.exports.index', 'exports', 'create', 'Reports', 'download'],
             ['Documents', 'documents.index', 'documents', 'view', 'Documents', 'document'],
             ['Document reports', 'documents.reports.inventory', 'documents', 'view', 'Documents', 'report'],
             ['Users', 'admin.users.index', 'users', 'view', 'Administration', 'users'],
@@ -70,6 +80,7 @@ final class HandleInertiaRequests extends Middleware
             ],
             // Sidebar entries are filtered by the same PermissionService the routes use (UI hiding is NOT a control).
             'nav' => fn () => $user instanceof User ? $this->nav($user) : [],
+            'notifications' => fn () => $user instanceof User ? ['unread' => $user->unreadNotifications()->count()] : ['unread' => 0],
             'flash' => fn () => [
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),

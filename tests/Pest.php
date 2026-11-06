@@ -7,13 +7,20 @@ use App\Kernel\Identity\Http\Middleware\EnsureMfa;
 use App\Kernel\Identity\Http\Middleware\RequireRecentAuth;
 use App\Kernel\Identity\Models\User;
 use App\Kernel\Money\Money;
+use App\Modules\Administration\Models\Company;
 use App\Modules\Administration\Models\DictionaryItem;
+use App\Modules\Commercial\Enums\DocumentStatus;
+use App\Modules\Commercial\Enums\DocumentType;
+use App\Modules\Commercial\Models\CommercialDocument;
+use App\Modules\Commercial\Models\Invoice;
+use App\Modules\Commercial\Services\CommercialDocumentService;
 use App\Modules\DocumentCentre\Models\Document;
 use App\Modules\DocumentCentre\Services\DocumentService;
 use App\Modules\Finance\Models\BankAccount;
 use App\Modules\Finance\Models\ChartAccount;
 use App\Modules\Finance\Models\Transaction;
 use App\Modules\Finance\Services\TransactionService;
+use App\Modules\Projects\Models\Client;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -127,4 +134,44 @@ function actingAsSatisfied(User $user): TestCase
         RequireRecentAuth::SESSION_KEY => now()->toIso8601String(),
         RequireRecentAuth::MFA_SESSION_KEY => now()->toIso8601String(),
     ]);
+}
+
+function makeClient(array $overrides = []): Client
+{
+    return Client::query()->create(array_merge([
+        'company_id' => Company::current()->id, 'name' => 'Acme Training Sdn Bhd', 'registration_no' => '202601234567',
+        'email' => 'ap@acme.example', 'address' => ['line1' => 'Jalan Ampang 1', 'city' => 'Kuala Lumpur', 'postcode' => '50450'], 'payment_terms_days' => 30,
+        'status' => 'active', 'created_by' => ownerUser()->id,
+    ], $overrides));
+}
+
+/**
+ * Draft → approved (by a different FIN) → issued invoice for one line.
+ *
+ * @param  array<string, mixed>  $extra
+ */
+function issuedInvoice(string $amount, ?Client $client = null, array $extra = []): Invoice
+{
+    $svc = app(CommercialDocumentService::class);
+    $maker = userWithRoles('FIN');
+    $checker = userWithRoles('FIN');
+    $client ??= makeClient();
+    $doc = $svc->createDraft(DocumentType::Invoice, array_merge(['client_id' => $client->id, 'title' => 'Leadership workshop',
+        'lines' => [['description' => 'Workshop delivery', 'quantity' => '1', 'unit' => 'lot', 'unit_price' => $amount]]], $extra), $maker);
+    $svc->submit($doc, $maker);
+    approveFully($doc, $checker);
+    /** @var Invoice $issued */
+    $issued = $svc->issue($doc->fresh(), $checker);
+
+    return $issued;
+}
+
+/** Approve every level of a pending commercial document: level 1 by $first (or a fresh FIN), level 2+ by the Owner. */
+function approveFully(CommercialDocument $doc, ?User $first = null): void
+{
+    $svc = app(CommercialDocumentService::class);
+    $fresh = fn () => $doc::query()->findOrFail($doc->id);
+    while ($fresh()->status === DocumentStatus::PendingApproval) {
+        $svc->approve($fresh(), $fresh()->current_level === 1 ? ($first ?? userWithRoles('FIN')) : ownerUser());
+    }
 }

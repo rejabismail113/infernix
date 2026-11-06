@@ -72,6 +72,18 @@ const mobileOpen = ref(false);
                     <Breadcrumbs :items="breadcrumbs" />
                 </div>
                 <div class="flex items-center gap-3 text-sm">
+                    <Link
+                        :href="route('notifications.index')"
+                        class="relative rounded-md p-1.5 text-surface-600 hover:bg-surface-100"
+                        :aria-label="`Notifications (${page.props.notifications?.unread ?? 0} unread)`"
+                        data-test="bell"
+                    >
+                        <Icon name="bell" />
+                        <span
+                            v-if="(page.props.notifications?.unread ?? 0) > 0"
+                            class="absolute -right-1 -top-1 min-w-[1.1rem] rounded-full bg-brand-600 px-1 text-center text-[10px] font-semibold leading-4 text-white"
+                        >{{ page.props.notifications?.unread }}</span>
+                    </Link>
                     <span
                         class="hidden text-surface-700 sm:inline"
                         data-test="user-name"

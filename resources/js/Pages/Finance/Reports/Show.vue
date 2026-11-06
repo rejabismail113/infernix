@@ -9,21 +9,29 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import type { Option, ReportData } from '@/types/finance';
 import type { TableColumn } from '@/types/table';
 
-const props = defineProps<{ report: string; name: string; data: ReportData; filters: Record<string, string | null>; accounts: Option[]; canExport: boolean }>();
+const props = defineProps<{ report: string; name: string; data: ReportData; filters: Record<string, string | null>; accounts: Option[]; canExport: boolean;
+    /** Set by non-finance report pages (e.g. commercial registers): own run URL, Export Centre link, breadcrumb and filters. */
+    routes?: { run: string; export: string; module: string; filters: string[] } }>();
 const f = reactive({ ...props.filters });
-const usesRange = ['general-ledger', 'profit-and-loss', 'cash-movement', 'expenses-by-category', 'owner-statement'].includes(props.report);
-const usesAsOf = ['trial-balance', 'payables-ageing', 'receivables-ageing'].includes(props.report);
+const usesRange = props.routes ? props.routes.filters.includes('from') : ['general-ledger', 'profit-and-loss', 'cash-movement', 'expenses-by-category', 'owner-statement'].includes(props.report);
+const usesAsOf = props.routes ? props.routes.filters.includes('as_of') : ['trial-balance', 'payables-ageing', 'receivables-ageing'].includes(props.report);
 const columns = computed<TableColumn[]>(() => props.data.columns.map((c) => ({ key: c.key, label: c.label, numeric: c.numeric, sortable: true })));
 const numericKeys = computed(() => new Set(props.data.columns.filter((c) => c.numeric).map((c) => c.key)));
-const apply = () => router.get(route('finance.reports.show', props.report), Object.fromEntries(Object.entries(f).filter(([, v]) => v !== null && v !== '')), { preserveState: true });
-const exportUrl = computed(() => route('finance.reports.export', { report: props.report, ...Object.fromEntries(Object.entries(props.filters).filter(([, v]) => v !== null && v !== '')) }));
-const sourceRoute: Record<string, string> = { transaction: 'finance.transactions.show', claim: 'finance.claims.show', bill: 'finance.bills.show', payment: 'finance.payments.show' };
+const apply = () => router.get(props.routes?.run ?? route('finance.reports.show', props.report), Object.fromEntries(Object.entries(f).filter(([, v]) => v !== null && v !== '')), { preserveState: true });
+const exportUrl = computed(() => props.routes?.export ?? route('finance.reports.export', { report: props.report, ...Object.fromEntries(Object.entries(props.filters).filter(([, v]) => v !== null && v !== '')) }));
+const docRoutes: Record<string, string> = { quotation: 'commercial.quotations.show', invoice: 'commercial.invoices.show', credit_note: 'commercial.credit-notes.show' };
+function docLink(row: Record<string, unknown>): string | null {
+    if (row.invoice_id) return route('commercial.invoices.show', Number(row.invoice_id));
+    const type = props.report === 'quotation-register' ? 'quotation' : props.report === 'invoice-register' ? 'invoice' : String(row.type ?? '');
+    return row.id && docRoutes[type] ? route(docRoutes[type], Number(row.id)) : null;
+}
+const sourceRoute: Record<string, string> = { transaction: 'finance.transactions.show', claim: 'finance.claims.show', bill: 'finance.bills.show', payment: 'finance.payments.show', invoice: 'commercial.invoices.show', credit_note: 'commercial.credit-notes.show', receipt: 'commercial.receipts.show' };
 </script>
 
 <template>
     <AppLayout
         :title="name"
-        :breadcrumbs="[{ label: 'Finance', href: route('finance.overview') }, { label: 'Reports', href: route('finance.reports.index') }, { label: name }]"
+        :breadcrumbs="routes ? [{ label: routes.module }, { label: name }] : [{ label: 'Finance', href: route('finance.overview') }, { label: 'Reports', href: route('finance.reports.index') }, { label: name }]"
     >
         <form
             class="flex flex-wrap items-end gap-2 rounded-lg border border-surface-200 bg-white p-3 text-sm"
@@ -91,6 +99,16 @@ const sourceRoute: Record<string, string> = { transaction: 'finance.transactions
                     :value="value"
                 />
                 <span v-else>{{ value }}</span>
+            </template>
+            <template #cell-document_no="{ row }">
+                <Link
+                    v-if="docLink(row)"
+                    :href="docLink(row) ?? ''"
+                    class="font-mono text-brand-700 hover:underline"
+                >
+                    {{ row.document_no }}
+                </Link>
+                <span v-else>{{ row.document_no }}</span>
             </template>
             <template #cell-journal_no="{ row }">
                 <Link

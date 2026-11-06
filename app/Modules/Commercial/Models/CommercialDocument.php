@@ -68,6 +68,7 @@ use Illuminate\Support\Carbon;
  * @property int $created_by
  * @property int|null $approved_by
  * @property Carbon|null $issued_at
+ * @property Carbon|null $created_at
  * @property-read Collection<int, DocumentLine> $lines
  */
 abstract class CommercialDocument extends Model implements PermissionResource

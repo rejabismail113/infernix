@@ -6,14 +6,12 @@ namespace App\Modules\Csr;
 
 use App\Kernel\Documents\DocumentLinkRegistry;
 use App\Kernel\Documents\LinkableEntityType;
-use App\Kernel\Identity\Enums\PermissionAction;
-use App\Kernel\Identity\Enums\RecordScope;
-use App\Kernel\Identity\Models\User;
-use App\Kernel\Identity\Services\PermissionService;
 use App\Kernel\Reports\ReportCatalog;
 use App\Kernel\Reports\ReportDefinition;
 use App\Kernel\Search\SearchRegistry;
+use App\Modules\Csr\Models\CsrEvidence;
 use App\Modules\Csr\Models\CsrProgramme;
+use App\Modules\Csr\Policies\CsrEvidencePolicy;
 use App\Modules\Csr\Policies\CsrProgrammePolicy;
 use App\Modules\Csr\Reports\CsrReports;
 use Illuminate\Database\Eloquent\Model;
@@ -41,12 +39,13 @@ final class CsrServiceProvider extends ServiceProvider
         $this->loadMigrationsFrom(__DIR__.'/Database/Migrations');
         $this->loadRoutesFrom(__DIR__.'/Routes/web.php');
         Gate::policy(CsrProgramme::class, CsrProgrammePolicy::class);
+        Gate::policy(CsrEvidence::class, CsrEvidencePolicy::class);
 
-        // Programme files are evidence photos: reachable only with csr_evidence:view (M08-04), never by inheritance alone.
-        $this->app->make(DocumentLinkRegistry::class)->register(new LinkableEntityType('csr_programme', CsrProgramme::class, 'CSR programme', ['photo', 'report', 'evidence', 'attachment', 'other'],
-            accessibleIds: fn (User $u): array|string => app(PermissionService::class)->can($u, PermissionAction::View, 'csr_evidence')
-                && app(PermissionService::class)->scopeFor($u, 'csr_programmes', PermissionAction::View) === RecordScope::All ? '*' : [],
+        $registry = $this->app->make(DocumentLinkRegistry::class);
+        $registry->register(new LinkableEntityType('csr_programme', CsrProgramme::class, 'CSR programme', ['report', 'evidence', 'attachment', 'other'],
             labelFor: fn (CsrProgramme $p): string => "{$p->programme_no} {$p->title}"));
+        // Evidence photos hang off their own record (resource csr_evidence) so programme access never inherits them (M08-04).
+        $registry->register(new LinkableEntityType('csr_evidence', CsrEvidence::class, 'CSR evidence photo', ['photo'], labelFor: fn (CsrEvidence $e): string => "CSR evidence #{$e->id}"));
         $this->app->make(SearchRegistry::class)->register('csr_programme', CsrProgramme::class, 'CSR programme', fn (Model $p): string => route('csr.programmes.show', $p->getKey()));
 
         $catalog = $this->app->make(ReportCatalog::class);

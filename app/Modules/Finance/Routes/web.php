@@ -7,6 +7,7 @@ use App\Modules\Finance\Http\Controllers\AccountController;
 use App\Modules\Finance\Http\Controllers\BankController;
 use App\Modules\Finance\Http\Controllers\BillController;
 use App\Modules\Finance\Http\Controllers\ClaimController;
+use App\Modules\Finance\Http\Controllers\FinanceRecordController;
 use App\Modules\Finance\Http\Controllers\JournalController;
 use App\Modules\Finance\Http\Controllers\OverviewController;
 use App\Modules\Finance\Http\Controllers\PaymentController;
@@ -24,6 +25,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['web', 'app'])->prefix('finance')->name('finance.')->group(function (): void {
     Route::get('/', OverviewController::class)->name('overview');
 
+    Route::get('records/search', [FinanceRecordController::class, 'search'])->middleware('throttle:120,1')->name('records.search');
     Route::get('accounts', [AccountController::class, 'index'])->name('accounts.index');
     Route::post('accounts', [AccountController::class, 'store'])->name('accounts.store');
     Route::put('accounts/{account}', [AccountController::class, 'update'])->name('accounts.update');

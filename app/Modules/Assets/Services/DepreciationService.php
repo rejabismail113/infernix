@@ -4,15 +4,17 @@ declare(strict_types=1);
 
 namespace App\Modules\Assets\Services;
 
+use App\Kernel\Finance\Contracts\FinanceRecords;
 use App\Kernel\Identity\Models\User;
 use App\Kernel\Money\Money;
+use App\Modules\Assets\Events\AssetDepreciationDue;
 use App\Modules\Assets\Models\Asset;
 use App\Modules\Assets\Models\AssetDepreciation;
-use App\Modules\Finance\Services\LedgerGateway;
 use Brick\Math\BigDecimal;
 use Brick\Math\RoundingMode;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 
 /**
  * Straight-line monthly depreciation schedule (first month = month of acquisition; last month absorbs rounding).
@@ -23,7 +25,7 @@ use Illuminate\Support\Facades\DB;
  */
 final class DepreciationService
 {
-    public function __construct(private readonly LedgerGateway $ledger) {}
+    public function __construct(private readonly FinanceRecords $finance) {}
 
     public static function postingEnabled(): bool
     {
@@ -93,8 +95,9 @@ final class DepreciationService
             DB::transaction(function () use ($row, $actor, &$count): void {
                 /** @var Asset $asset */
                 $asset = Asset::query()->findOrFail($row->asset_id);
-                $journalId = $this->ledger->postDepreciation($row->id, $asset->asset_no, $row->period_end, (string) $row->amount->getAmount(), $actor, $asset->project_id);
-                $row->forceFill(['journal_id' => $journalId, 'posted_at' => now()])->save();
+                Event::dispatch(new AssetDepreciationDue($row->id, $asset->asset_no, $row->period_end->toDateString(), (string) $row->amount->getAmount(), $actor->id, $asset->project_id));
+                $journal = $this->finance->journalFor('asset_depreciation', $row->id) ?? throw new \RuntimeException('Depreciation journal was not posted.');
+                $row->forceFill(['journal_id' => $journal['id'], 'posted_at' => now()])->save();
                 $count++;
             });
         }

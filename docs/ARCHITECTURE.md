@@ -118,6 +118,16 @@ Implemented so far (Prompt 2): `JournalPosted`, `JournalReversed`, `ExpenseRecor
 after commit). Claim submission/rejection, bank import and matching are recorded in the audit trail; their events are
 added when a consumer needs them (Prompt 3 notifications).
 
+Implemented in Prompt 5: kernel contracts `Finance\Contracts\FinanceRecords` (read + LINK booked transactions / bills / claims /
+payments, tag cost lines with an activity — never posts), `Crm\Contracts\ActivityDirectory`, `Crm\Contracts\PurchasingDirectory`,
+`Documents\Contracts\VendorPurchaseOrders`, `Documents\Contracts\HtmlToPdf`, `Secrets\Contracts\VaultClient`, kernel
+`Search\{SearchIndexer, SearchRegistry, SearchService}`, `Approval\ApprovalFlow` (shared multi-level approval + maker-checker) and
+`Reports\ReportTable`. Events: `Assets\Events\AssetDisposed` and `AssetDepreciationDue` (dispatched synchronously inside the approval /
+posting transaction; M01 listeners post through LedgerGateway → PostingService), `HumanResources\Events\StaffLifecycleChanged`
+(M13 opens joiner/mover/leaver checklists and revokes a leaver's entitlements), and the existing `AssetQualifyingPurchaseRecorded`
+(M05 records a pending registration). P3 modules never import Finance models/posting/services, Commercial/Projects/HR internals
+(architecture tests); every log channel, notification, export and the search index pass through the SecretRedactor.
+
 Implemented in Prompt 4: `DocumentIssued` now carries counterparty type/id + subject; M04 `DeliverMemoToInbox` listens
 for memos/appointment letters. Kernel contracts added: `StaffDirectory`, `VendorDirectory`, `GeneratedDocumentIssuer`,
 `ProjectDirectory` (assignment, visibility, lead, milestone lookups).

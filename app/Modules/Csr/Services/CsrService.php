@@ -106,10 +106,13 @@ final class CsrService
         }
 
         return DB::transaction(function () use ($p, $file, $identifiable, $consent, $consentNote, $actor): CsrEvidence {
-            $doc = $this->documents->attach($file, $actor, ['title' => "{$p->programme_no} evidence", 'classification' => 'restricted', 'tags' => ['csr', 'photo']], new LinkTarget('csr_programme', $p->id, 'photo'));
-
-            return CsrEvidence::query()->create(['programme_id' => $p->id, 'document_id' => $doc->documentId, 'people_identifiable' => $identifiable, 'consent_obtained' => $consent,
+            $doc = $this->documents->attach($file, $actor, ['title' => "{$p->programme_no} evidence", 'classification' => 'restricted', 'tags' => ['csr', 'photo']]);
+            $e = CsrEvidence::query()->create(['programme_id' => $p->id, 'document_id' => $doc->documentId, 'people_identifiable' => $identifiable, 'consent_obtained' => $consent,
                 'consent_note' => $consentNote, 'publishable' => false, 'created_by' => $actor->id]);
+            // Linked to the evidence record (resource csr_evidence), NOT the programme: programme viewers never inherit photos.
+            $this->documents->link($doc->documentId, new LinkTarget('csr_evidence', $e->id, 'photo'), $actor);
+
+            return $e;
         });
     }
 

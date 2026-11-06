@@ -25,7 +25,7 @@ it('sends a grouped, icon-tagged sidebar that differs by role (server-side filte
     $navFor = fn (string $role) => collect(actingAsSatisfied(userWithRoles($role))->get('/')->assertOk()->viewData('page')['props']['nav']);
 
     $own = $navFor('OWN');
-    expect($own->pluck('group')->unique()->values()->all())->toBe(['Overview', 'Sales', 'Projects', 'Finance', 'Procurement', 'People', 'Reports', 'Documents', 'Administration'])
+    expect($own->pluck('group')->unique()->values()->all())->toBe(['Overview', 'Sales', 'Projects', 'Finance', 'Procurement', 'Operations', 'People', 'Security', 'Reports', 'Documents', 'Administration'])
         ->and($own->every(fn (array $i): bool => $i['icon'] !== ''))->toBeTrue()
         ->and($own->pluck('label')->all())->toContain('Audit log', 'Permissions', 'Documents');
 

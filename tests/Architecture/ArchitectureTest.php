@@ -72,3 +72,28 @@ arch('Projects never import HR or Commercial models/services (staff and certific
     ->expect('App\Modules\Projects')->not->toUse(['App\Modules\HumanResources', 'App\Modules\Commercial\Models', 'App\Modules\Commercial\Services'])
     ->and('App\Modules\Commercial')->not->toUse(['App\Modules\HumanResources'])
     ->group('M02-07', 'M03-06');
+
+arch('P3 operational modules never touch Finance models, posting or services (links go through kernel FinanceRecords)')
+    ->expect(['App\\Modules\\Assets', 'App\\Modules\\Activities', 'App\\Modules\\Csr', 'App\\Modules\\Certifications', 'App\\Modules\\Procurement', 'App\\Modules\\Credentials'])
+    ->not->toUse(['App\\Modules\\Finance\\Models', 'App\\Modules\\Finance\\Posting', 'App\\Modules\\Finance\\Services'])
+    ->group('M05-01', 'M07-02', 'M08-02', 'M09-04', 'M10-05', 'UAT-12');
+
+arch('P3 operational modules never reach into Commercial or Projects internals (kernel contracts only)')
+    ->expect(['App\\Modules\\Assets', 'App\\Modules\\Activities', 'App\\Modules\\Csr', 'App\\Modules\\Certifications', 'App\\Modules\\Procurement', 'App\\Modules\\Credentials'])
+    ->not->toUse(['App\\Modules\\Commercial\\Models', 'App\\Modules\\Commercial\\Services', 'App\\Modules\\Projects\\Models', 'App\\Modules\\Projects\\Services', 'App\\Modules\\HumanResources\\Models', 'App\\Modules\\HumanResources\\Services'])
+    ->group('M10-02', 'M13-06');
+
+arch('only the Credentials module (and the kernel contract) touches the vault')
+    ->expect('App\\Modules\\Credentials\\Vault')->toOnlyBeUsedIn(['App\\Modules\\Credentials'])
+    ->group('M13-02', 'M13-03');
+
+it('M13-02: no migration adds a column that could hold a plaintext secret', function (): void {
+    $pattern = "/->(string|text|longText|char)\\(\\s*'(password|passwd|secret|secret_value|api_key|apikey|access_token|refresh_token|private_key|client_secret)'/i";
+    $offenders = [];
+    foreach ((new Finder)->files()->in([base_path('app/Modules'), base_path('database/migrations')])->name('*.php')->notName('0001_01_01_000000_create_users_table.php') as $file) {
+        if (str_contains($file->getPathname(), 'igrations') && preg_match($pattern, $file->getContents()) === 1) {
+            $offenders[] = $file->getRelativePathname();
+        }
+    }
+    expect($offenders)->toBe([]);
+})->group('M13-02', 'UAT-08');

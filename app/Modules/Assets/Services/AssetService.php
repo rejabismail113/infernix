@@ -235,14 +235,13 @@ final class AssetService
     private function create(array $data, User $actor, array $fixed): Asset
     {
         $category = isset($data['category_id']) ? AssetCategory::query()->find((int) $data['category_id']) : null;
-        $date = Carbon::parse((string) $fixed['acquired_on']);
         $cost = Money::myr((string) ($data['cost'] ?? '0'));
         $residual = isset($data['residual_value']) && $data['residual_value'] !== '' ? Money::myr((string) $data['residual_value'])
             : Money::myr((string) $cost->getAmount()->multipliedBy($category->residual_percent ?? '0')->dividedBy(100, 2, RoundingMode::HALF_UP));
         $class = (string) ($data['asset_class'] ?? $category->default_class ?? (self::classify((string) $cost->getAmount()) === 'capital_asset' ? 'capital_asset' : 'low_value_equipment'));
         $asset = Asset::query()->create($fixed + [
             'company_id' => $actor->company_id,
-            'asset_no' => $this->numbering->allocate((int) $actor->company_id, 'ASSET', (int) $date->format('Y'))['formatted'],
+            'asset_no' => $this->numbering->allocate((int) $actor->company_id, 'ASSET', (int) today()->format('Y'))['formatted'], // numbered in the registration year
             'name' => $data['name'], 'description' => $data['description'] ?? null, 'category_id' => $category?->id, 'asset_class' => $class,
             'serial_no' => $data['serial_no'] ?? null, 'model' => $data['model'] ?? null, 'location' => $data['location'] ?? null, 'status' => 'in_store',
             'cost' => $cost, 'residual_value' => $residual, 'useful_life_months' => (int) ($data['useful_life_months'] ?? $category->useful_life_months ?? 36),

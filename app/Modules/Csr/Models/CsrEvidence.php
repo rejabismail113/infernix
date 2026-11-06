@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Csr\Models;
 
 use App\Kernel\Audit\Auditable;
+use App\Kernel\Identity\Contracts\PermissionResource;
+use App\Kernel\Identity\Models\User;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -22,7 +24,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property bool $publishable
  * @property int $created_by
  */
-final class CsrEvidence extends Model
+final class CsrEvidence extends Model implements PermissionResource
 {
     use Auditable;
 
@@ -35,5 +37,21 @@ final class CsrEvidence extends Model
     protected function casts(): array
     {
         return ['people_identifiable' => 'boolean', 'consent_obtained' => 'boolean', 'publishable' => 'boolean'];
+    }
+
+    /** Photos are their own resource: programme access alone never reaches them (M08-04). */
+    public static function resourceName(): string
+    {
+        return 'csr_evidence';
+    }
+
+    public function isOwnedBy(User $user): bool
+    {
+        return $this->created_by === $user->id;
+    }
+
+    public function isAssignedTo(User $user): bool
+    {
+        return false;
     }
 }

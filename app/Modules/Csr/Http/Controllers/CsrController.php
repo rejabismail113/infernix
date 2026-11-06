@@ -73,7 +73,7 @@ final class CsrController
         $programme->load('volunteers', 'inKind', 'evidence');
         $canEdit = $user->can('update', $programme);
         $seeEvidence = $user->can('viewEvidence', $programme);
-        $docs = $seeEvidence ? collect($documents->linkedTo('csr_programme', $programme->id))->keyBy('document_id') : collect();
+        $docs = $seeEvidence ? $programme->evidence->mapWithKeys(fn (CsrEvidence $e): array => [$e->document_id => $documents->linkedTo('csr_evidence', $e->id)[0] ?? []]) : collect();
 
         return Inertia::render('Csr/Show', [
             'programme' => $this->row($programme) + ['objectives' => $programme->objectives, 'sponsor' => $programme->sponsor, 'outcome' => $programme->outcome, 'target_count' => $programme->target_count, 'actual_count' => $programme->actual_count],

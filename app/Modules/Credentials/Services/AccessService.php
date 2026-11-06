@@ -21,8 +21,6 @@ use Illuminate\Support\Facades\DB;
  */
 final class AccessService
 {
-    public function __construct(private readonly VaultClient $vault) {}
-
     public function request(CredentialMetadata $c, User $requester, string $justification, ?string $until): CredentialAccessRequest
     {
         if ($c->hasActiveEntitlement($requester)) {
@@ -60,7 +58,7 @@ final class AccessService
 
     public function grant(CredentialMetadata $c, User $user, User $grantor, ?int $requestId = null, ?string $until = null): CredentialEntitlement
     {
-        $synced = $c->vault_item_reference !== null && $this->vault->isConfigured() ? ($this->vault->grant($c->vault_item_reference, (string) $user->email) ? 'synced' : 'not_applicable') : 'not_applicable';
+        $synced = $c->vault_item_reference !== null && $this->vault()->isConfigured() ? ($this->vault()->grant($c->vault_item_reference, (string) $user->email) ? 'synced' : 'not_applicable') : 'not_applicable';
         $e = CredentialEntitlement::query()->create(['credential_id' => $c->id, 'user_id' => $user->id, 'request_id' => $requestId, 'granted_by' => $grantor->id, 'granted_at' => now(),
             'expires_on' => $until, 'vault_sync' => $synced]);
         Audit::log('entitlement_grant', $c, null, null, ['user_id' => $user->id, 'until' => $until, 'vault_sync' => $synced], null, $grantor);
@@ -75,8 +73,8 @@ final class AccessService
         }
         $c = CredentialMetadata::query()->findOrFail($e->credential_id);
         $user = User::query()->find($e->user_id);
-        if ($c->vault_item_reference !== null && $this->vault->isConfigured() && $user !== null) {
-            $this->vault->revoke($c->vault_item_reference, (string) $user->email);
+        if ($c->vault_item_reference !== null && $this->vault()->isConfigured() && $user !== null) {
+            $this->vault()->revoke($c->vault_item_reference, (string) $user->email);
         }
         $e->forceFill(['revoked_at' => now(), 'revoked_by' => $actor->id, 'revoke_reason' => $reason])->save();
         Audit::log('entitlement_revoke', $c, null, ['user_id' => $e->user_id], null, $reason, $actor);
@@ -92,5 +90,11 @@ final class AccessService
         }
 
         return $n;
+    }
+
+    /** Resolved per call: the configured vault (or a test double) is never captured by a long-lived instance. */
+    private function vault(): VaultClient
+    {
+        return app(VaultClient::class);
     }
 }

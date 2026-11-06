@@ -1163,6 +1163,24 @@ Legend: `CHECK(assets.purchase_transaction_id IS NOT NULL OR purchase_bill_line_
 `UNIQUE(asset_assignments.asset_id) WHERE returned_at IS NULL`; in-kind values are excluded from all cash
 reports (M08-03); `UNIQUE(renewal_schedules.renewable_type, renewable_id, remind_days)`.
 
+**As built in Prompt 5 (M05/M07/M08/M09).**
+- M05: `asset_categories` (default class, useful life, residual % — PLACEHOLDER), `asset_candidates` (posted CAPITAL_ASSET purchase lines
+  awaiting registration; UNIQUE (source_type, source_line_id)), `assets` (AST-; `acquisition_type` purchase|opening_balance|donation;
+  purchase ⇒ `purchase_source_type` + `purchase_transaction_id` XOR `purchase_bill_id` + `purchase_line_id` (CHECK); trigger
+  `assets_purchase_ceiling`: Σ cost per purchase line ≤ line amount and the source must be posted/approved CAPITAL_ASSET),
+  `asset_assignments` (one open per asset — partial UNIQUE), `asset_maintenance` (repair cost via `finance_links`),
+  `asset_disposals` (DSP-; matrix approval; cost/accumulated/NBV snapshots; one live disposal per asset), `asset_depreciation`
+  (monthly schedule; rows with `journal_id` immutable — trigger).
+- M07: `activities` (ACT-; type event|site_visit|conference|trip|training_delivery|csr; budget; post-event report), `activity_attendees`,
+  `activity_itinerary_items` (estimates only). Actuals = booked `claim_lines` / `transaction_lines` / `bill_lines` with `activity_id`.
+- M08: `csr_programmes` (CSR-; `activity_id` UNIQUE = finance anchor), `csr_volunteers`, `csr_in_kind_contributions` (estimated value,
+  never cash), `csr_evidence` (document_id UNIQUE, consent flags; CHECK publishable ⇒ consent when people identifiable).
+- M09: `certifications` (holder staff|company CHECK; no_expiry XOR expiry_date CHECK), `memberships` (annual period), `renewals`
+  (one row per cycle; UNIQUE (renewable_type, renewable_id, due_date); fee via `finance_links`).
+- Finance hooks (M01 migration 2026_01_07_000001): `transaction_lines.activity_id`, `bill_lines.activity_id`, `bills.vendor_po_id`,
+  `bills.goods_receipt_id`, UNIQUE (vendor_id, lower(btrim(vendor_invoice_no))), `finance_links` (entity_type, entity_id, source_type
+  transaction|bill|claim|payment, source_id, purpose; UNIQUE per entity+source).
+
 ## 9. Procurement (M10) & Credentials (M13)
 
 ```mermaid
@@ -1287,6 +1305,17 @@ Legend: `UNIQUE(bills.vendor_id, vendor_invoice_no)` (see §5); `credentials_met
 column by design and a DB `CHECK (vault_item_reference !~* '(password|secret|token)=')` as a cheap guard;
 `UNIQUE(credential_entitlements.credential_id, user_id) WHERE revoked_at IS NULL`;
 `subscription_review_tasks` never writes to finance tables (UAT-12).
+
+**As built in Prompt 5 (M10/M13 + kernel search).**
+- M10: `vendors` + category, email, phone, address, payment_terms_days, notes; `purchase_requests` (PR-; matrix approval; `vendor_po_id`
+  once ordered) + `purchase_request_lines`; `goods_receipts` (GRN-; against an issued vendor PO) + `goods_receipt_lines` (never above the
+  ordered quantity — service); `subscriptions` (vendor, product, licence owner, seats, price, cycle, auto_renew, renewal_date, status) +
+  `subscription_reviews` (UNIQUE (subscription_id, renewal_date); open → renew|cancel).
+- M13: `credentials_metadata` (CRD-; category / environment / sensitivity CHECKs; vault_provider + vault_item_reference; owner; project /
+  client scope with CHECK client credentials ⇒ client_id; shared service account ⇒ justification; **no secret column**),
+  `credential_access_requests` (CHECK decided_by ≠ requester), `credential_entitlements` (one active per user+credential — partial
+  UNIQUE; revoke fields; vault_sync), `credential_rotations`, `jml_checklists` (joiner|mover|leaver, items JSON).
+- Kernel: `search_index` (entity_type, entity_id UNIQUE, title, body — redacted on write; GIN text index).
 
 ## 10. Reporting (M11)
 

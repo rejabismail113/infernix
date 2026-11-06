@@ -106,6 +106,27 @@ Approving a commercial document follows the approval matrix and maker-checker (p
 Owner records a reason). Issuing needs `edit` on the document; voiding needs `approve`. Every export also needs
 `export` on the report's own resource. The PM role currently has nothing it may export.
 
+### As seeded in Prompt 5 (P3)
+
+| Resource | OWN | FIN | PM | HR | STF | AUD | APP |
+|---|---|---|---|---|---|---|---|
+| assets | view create edit export | view create edit export | view | view | view(own = in my custody) | view export | – |
+| asset_disposals | view create edit approve | view create edit(own) approve | – | – | – | view | view/approve(assigned) |
+| activities | view create edit export | view edit export | view(assigned) create edit(own) export(assigned) | view | view(assigned) create edit(own) | view export | – |
+| csr_programmes | view create edit export | view create edit export | view | view create edit export | view(assigned = volunteer) | view export | – |
+| csr_evidence (restricted photos) | view edit | – | – | view edit | – | – | – |
+| certifications / memberships | view create edit export | view export | view (certs) | view create edit export | view(own) create edit(own) | view export | – |
+| purchase_requests | view create edit approve export | view create edit approve export | view(own) create edit(own) | view(own) create edit(own) | view(own) create edit(own) | view export | view/approve(assigned) |
+| goods_receipts | view create | view create | view create | – | – | view | – |
+| subscriptions | view create edit export | view create edit export | view | – | view(own = licence owner) | view export | – |
+| credentials (metadata) | view create edit approve reveal export | view(assigned) create edit(own) approve(own) reveal(assigned) | same as FIN | view(assigned) | view(assigned) reveal(assigned) | view export | – |
+| credential_requests | create | create | create | create | create | – | – |
+| jml_checklists | view edit | – | – | view edit | – | – | – |
+
+Credential "assigned" = resource owner, active entitlement, or a project/client the user can see (M13-06). A reveal additionally needs
+recent re-authentication and an active entitlement (or ownership) — matrix rights alone are not enough (M13-03). Approving an access
+request = approve:own (the credential owner) or approve:all (Owner role), never the requester.
+
 ### As seeded in Prompt 4
 
 | Resource | OWN | FIN | PM | HR | STF | AUD | APP |

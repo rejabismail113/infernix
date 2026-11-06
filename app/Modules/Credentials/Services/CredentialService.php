@@ -34,7 +34,6 @@ final class CredentialService
 
     public function __construct(
         private readonly NumberingService $numbering,
-        private readonly VaultClient $vault,
         private readonly SecretRedactor $redactor,
         private readonly PermissionService $permissions,
         private readonly ProjectDirectory $projects,
@@ -140,17 +139,17 @@ final class CredentialService
         if (trim($reason) === '') {
             throw new CredentialRejected('A reason is required to reveal a secret.');
         }
-        if (! $this->vault->isConfigured() || $c->vault_item_reference === null) {
+        if (! $this->vault()->isConfigured() || $c->vault_item_reference === null) {
             throw new CredentialRejected('No vault is configured for this credential; open it in your vault using the reference.');
         }
-        Audit::log('reveal', $c, null, null, ['field' => 'vault_secret', 'provider' => $this->vault->provider()], $reason, $actor);
+        Audit::log('reveal', $c, null, null, ['field' => 'vault_secret', 'provider' => $this->vault()->provider()], $reason, $actor);
 
-        return $this->vault->reveal($c->vault_item_reference);
+        return $this->vault()->reveal($c->vault_item_reference);
     }
 
     public function deepLink(CredentialMetadata $c): ?string
     {
-        return $c->vault_item_reference === null ? null : $this->vault->deepLink($c->vault_item_reference);
+        return $c->vault_item_reference === null ? null : $this->vault()->deepLink($c->vault_item_reference);
     }
 
     /**
@@ -175,5 +174,11 @@ final class CredentialService
         }
 
         return Carbon::parse($last ?? today()->toDateString())->addDays($interval)->toDateString();
+    }
+
+    /** Resolved per call: the configured vault (or a test double) is never captured by a long-lived instance. */
+    private function vault(): VaultClient
+    {
+        return app(VaultClient::class);
     }
 }

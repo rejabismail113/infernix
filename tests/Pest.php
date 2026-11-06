@@ -17,11 +17,16 @@ use App\Modules\Commercial\Services\CommercialDocumentService;
 use App\Modules\DocumentCentre\Models\Document;
 use App\Modules\DocumentCentre\Services\DocumentService;
 use App\Modules\Finance\Models\BankAccount;
+use App\Modules\Finance\Models\Bill;
 use App\Modules\Finance\Models\ChartAccount;
+use App\Modules\Finance\Models\Payment;
 use App\Modules\Finance\Models\Transaction;
+use App\Modules\Finance\Services\BillService;
+use App\Modules\Finance\Services\PaymentService;
 use App\Modules\Finance\Services\TransactionService;
 use App\Modules\HumanResources\Models\StaffProfile;
 use App\Modules\HumanResources\Services\StaffService;
+use App\Modules\Procurement\Models\Vendor;
 use App\Modules\Projects\Models\Client;
 use App\Modules\Projects\Models\Project;
 use App\Modules\Projects\Services\ProjectService;
@@ -203,4 +208,46 @@ function makeProject(?User $pm = null, array $members = []): Project
     }
 
     return $p->fresh();
+}
+
+/** A vendor for P3 tests (M10). */
+function makeVendor(string $name = 'Tech Supplies Sdn Bhd'): Vendor
+{
+    return Vendor::query()->create(['company_id' => ownerUser()->company_id, 'name' => $name.' '.Str::random(3), 'status' => 'active']);
+}
+
+/**
+ * Draft → submitted (by a FIN maker) → approved (by the Owner) vendor bill.
+ *
+ * @param  list<array<string, mixed>>  $lines
+ * @param  array<string, mixed>  $extra
+ */
+function approvedVendorBill(Vendor $vendor, array $lines, string $invoiceNo, array $extra = []): Bill
+{
+    $fin = userWithRoles('FIN');
+    $svc = app(BillService::class);
+    $bill = $svc->create(['vendor_id' => $vendor->id, 'vendor_invoice_no' => $invoiceNo, 'bill_date' => today()->toDateString(), 'due_date' => today()->addDays(30)->toDateString(), 'lines' => $lines] + $extra, $fin);
+    $svc->submit($bill, $fin);
+
+    return $svc->approve($bill->fresh(), ownerUser())->fresh();
+}
+
+/** Pay a bill in full through the real maker-checker payment flow. */
+function payVendorBill(Bill $bill, string $amount): Payment
+{
+    $maker = userWithRoles('FIN');
+    $svc = app(PaymentService::class);
+    $p = $svc->create(['payment_date' => today()->toDateString(), 'bank_account_id' => bank()->id, 'method' => 'transfer', 'payee_type' => 'vendor', 'payee_id' => $bill->vendor_id, 'payee_name' => 'Vendor',
+        'allocations' => [['target_type' => 'bill', 'target_id' => $bill->id, 'amount' => $amount]]], $maker);
+    $svc->submit($p, $maker);
+    $svc->approve($p->fresh(), ownerUser());
+
+    return $svc->post($p->fresh(), $maker);
+}
+
+/** @return array{transactions: int, journals: int, bills: int, payments: int, claims: int} money-row counts (rule 12 checks) */
+function moneyRowCounts(): array
+{
+    return ['transactions' => DB::table('transactions')->count(), 'journals' => DB::table('journals')->count(), 'bills' => DB::table('bills')->count(),
+        'payments' => DB::table('payments')->count(), 'claims' => DB::table('claims')->count()];
 }

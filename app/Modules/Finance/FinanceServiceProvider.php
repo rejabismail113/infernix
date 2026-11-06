@@ -14,8 +14,10 @@ use App\Kernel\Identity\Services\PermissionService;
 use App\Kernel\Notifications\PendingApprovalRegistry;
 use App\Kernel\Reports\ReportCatalog;
 use App\Kernel\Reports\ReportDefinition;
+use App\Modules\Assets\Events\AssetDepreciationDue;
 use App\Modules\Assets\Events\AssetDisposed;
 use App\Modules\Finance\Http\Controllers\ReportController;
+use App\Modules\Finance\Listeners\PostAssetDepreciation;
 use App\Modules\Finance\Listeners\PostAssetDisposal;
 use App\Modules\Finance\Models\BankAccount;
 use App\Modules\Finance\Models\Bill;
@@ -69,6 +71,7 @@ final class FinanceServiceProvider extends ServiceProvider
         }
         // M05-04: an approved disposal posts its journal synchronously, inside the disposal's transaction.
         Event::listen(AssetDisposed::class, PostAssetDisposal::class);
+        Event::listen(AssetDepreciationDue::class, PostAssetDepreciation::class);
         Gate::define('set-tax-treatment', fn (User $u): bool => app(PermissionService::class)->can($u, PermissionAction::Edit, 'tax_review'));
         Gate::define('view-finance-reports', fn (User $u): bool => app(PermissionService::class)->can($u, PermissionAction::View, 'finance_reports'));
         Gate::define('export-finance-reports', fn (User $u): bool => app(PermissionService::class)->can($u, PermissionAction::Export, 'finance_reports'));

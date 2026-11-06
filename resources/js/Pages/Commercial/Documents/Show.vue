@@ -22,7 +22,7 @@ const props = defineProps<{
 }>();
 const d = computed(() => props.document);
 const r = (name: string) => route(`commercial.${props.routeBase}.${name}`, d.value.id);
-const plural = props.type === 'credit_note' ? 'Credit notes' : `${props.label}s`;
+const plural = props.type === 'credit_note' ? 'Credit notes' : props.type === 'vendor_po' ? 'Vendor POs' : `${props.label}s`;
 const approve = useForm({ override_reason: '' });
 const issueDate = ref(new Date().toISOString().slice(0, 10));
 const issuing = ref(false);
@@ -52,7 +52,7 @@ const lineColumns = computed(() => [
     <AppLayout
         :title="`${label} ${d.number}`"
         :status="d.status"
-        :breadcrumbs="[{ label: 'Sales' }, { label: plural, href: route(`commercial.${routeBase}.index`) }, { label: d.number }]"
+        :breadcrumbs="[{ label: type === 'vendor_po' ? 'Procurement' : 'Sales' }, { label: plural, href: route(`commercial.${routeBase}.index`) }, { label: d.number }]"
     >
         <template #chips>
             <StatusChip
@@ -104,6 +104,13 @@ const lineColumns = computed(() => [
             >
                 Client rejected
             </Button>
+            <Link
+                v-if="type === 'quotation' && ['issued', 'accepted'].includes(d.status)"
+                :href="route('commercial.client-pos.index', { quotation_id: d.id })"
+                class="rounded-md border border-surface-300 px-3 py-2 text-sm hover:bg-surface-100"
+            >
+                Record client PO
+            </Link>
             <Button
                 v-if="can.convertProject && !related.project_id"
                 variant="secondary"
@@ -191,7 +198,7 @@ const lineColumns = computed(() => [
                 <dl class="grid gap-3 text-sm sm:grid-cols-3">
                     <div>
                         <dt class="text-surface-500">
-                            Client
+                            {{ type === 'vendor_po' ? 'Vendor' : 'Client' }}
                         </dt>
                         <dd class="font-medium">
                             {{ d.client }}

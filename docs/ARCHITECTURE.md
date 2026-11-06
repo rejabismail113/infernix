@@ -67,8 +67,11 @@ The kernel is the only code every module may depend on. It never depends on a mo
 4. **Projects (M02)** owns clients/projects. M03 reads them only through the kernel `Crm\Contracts\ClientDirectory` /
    `ProjectDirectory` (snapshot, options, create project from quotation) and keeps its own counterparty snapshot.
    M02 updates `status_payment` from M03's `ProjectBillingChanged` event. Project margin is computed by Reporting.
-5. **HR (M04)** owns staff + rate versions; timesheet payment batches produce Finance payments through a
-   `PaymentBatchApproved` event (maker-checker in Kernel\Approval).
+5. **HR (M04)** owns staff + rate versions. Other modules read staff only via the kernel `People\Contracts\StaffDirectory`
+   (no identifiers or bank data). Payment batches post through `LedgerGateway::postPayrollAccrual/postPayrollPayout`
+   (maker-checker in Kernel\Approval) and render vouchers via the kernel `IssuedDocumentRenderer`. HR checks project
+   assignment (UAT-07) via `ProjectDirectory::assignedProjectIds/managedProjectIds`; M02 never imports HR, M03 never
+   imports HR; certificates are issued by M02 through the kernel `GeneratedDocumentIssuer` (architecture tests).
 6. **Document Centre (M06)** is the only module that touches object storage. Everything else attaches files via
    `Kernel\Documents` contracts and the validated `entity_document_links` morph map.
 7. **Reporting (M11)** is read-only and applies the same policy filters as list pages. Dashboards call the report
@@ -114,6 +117,10 @@ Implemented so far (Prompt 2): `JournalPosted`, `JournalReversed`, `ExpenseRecor
 `AssetQualifyingPurchaseRecorded`, `ClaimApproved`, `ClaimPaid`, `BillApproved`, `PaymentPosted` (all dispatched
 after commit). Claim submission/rejection, bank import and matching are recorded in the audit trail; their events are
 added when a consumer needs them (Prompt 3 notifications).
+
+Implemented in Prompt 4: `DocumentIssued` now carries counterparty type/id + subject; M04 `DeliverMemoToInbox` listens
+for memos/appointment letters. Kernel contracts added: `StaffDirectory`, `VendorDirectory`, `GeneratedDocumentIssuer`,
+`ProjectDirectory` (assignment, visibility, lead, milestone lookups).
 
 Implemented in Prompt 3: `DocumentIssued`, `DocumentVoided`, `QuotationConverted` (→ project / invoice),
 `ReceiptPosted`, `ProjectBillingChanged` (M03 → M02 status_payment). Scheduled jobs: `NotifyOverdueInvoices`

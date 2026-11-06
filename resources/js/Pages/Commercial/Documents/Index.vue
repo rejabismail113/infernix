@@ -14,7 +14,7 @@ const props = defineProps<{ type: string; label: string; routeBase: string; docu
 const f = reactive({ q: props.filters.q ?? '', status: props.filters.status ?? '', settlement: props.filters.settlement ?? '' });
 const table = useServerTable(() => route(`commercial.${props.routeBase}.index`), () => props.filters);
 const isInvoice = computed(() => props.type === 'invoice');
-const plural = computed(() => (props.type === 'credit_note' ? 'Credit notes' : `${props.label}s`));
+const plural = computed(() => (props.type === 'credit_note' ? 'Credit notes' : props.type === 'vendor_po' ? 'Vendor POs' : `${props.label}s`));
 const statuses = computed(() => {
     const base = ['draft', 'pending_approval', 'approved', 'issued'];
     if (props.type === 'quotation') return [...base, 'accepted', 'rejected', 'superseded', 'void'];
@@ -35,11 +35,11 @@ const columns = computed<TableColumn[]>(() => [
 <template>
     <AppLayout
         :title="plural"
-        :breadcrumbs="[{ label: 'Sales' }, { label: plural }]"
+        :breadcrumbs="[{ label: type === 'vendor_po' ? 'Procurement' : 'Sales' }, { label: plural }]"
     >
         <template #actions>
             <Link
-                v-if="type !== 'credit_note'"
+                v-if="type === 'quotation' || type === 'invoice'"
                 :href="route('commercial.reports.show', type === 'quotation' ? 'quotation-register' : 'invoice-register')"
                 class="text-sm font-medium text-brand-700 hover:underline"
             >

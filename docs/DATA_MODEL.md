@@ -984,6 +984,18 @@ Legend: `UNIQUE(engagements.staff_profile_id, version)`; trigger blocks UPDATE o
 `locked=true`; `CHECK(timesheet_entries.hours > 0 AND hours <= 24)`; `UNIQUE(timesheets.staff_profile_id,
 period_start)`.
 
+**As built in Prompt 4.** HR: `staff_profiles` (staff_no ST-, engagement_type, classification + reviewed_at/by, id_number
+encrypted + id_last4, contact, status), `staff_bank_details` (all encrypted + account_last4), `engagements` (versioned,
+`locked_at`; trigger `engagements_locked`), `timesheets` (rate_snapshot, calculated_amount frozen by
+`timesheets_calculation_frozen`; status draft→submitted→verified→calculated→batched→approved→paid, rejected),
+`timesheet_entries` (editable only in draft/rejected; `exception_granted`), `payment_batches` (PB-, approval level,
+accrual/payout journal ids, voucher_no PV-, handoff document) + `payment_batch_lines` (UNIQUE timesheet_id, frozen once
+submitted), `staff_memos`. M02: `leads` (stage, quotation_id UNIQUE), `projects` + billing_terms, cost_budget, lead_id,
+closeout_checklist, description; `project_members` (user_id copied for scoping, engagement_id), `milestones` (blocker
+required when blocked, billable_amount), `tasks`, `training_sessions`, `training_participants` (email encrypted,
+consent_given, certificate_document_id). M03: `commercial_documents` + external_ref, subject, body, verification_token
+(UNIQUE, required for certificates), effective_date; types add `appointment_letter`.
+
 ## 8. Assets (M05), Activities (M07), CSR (M08), Certifications (M09)
 
 ```mermaid

@@ -20,21 +20,26 @@ import type { DocDetail, DocLine, PickOption, TaxCode } from '@/types/commercial
 
 const props = defineProps<{
     type: string; label: string; routeBase: string; document: DocDetail | null;
-    prefill: { client_id: number; project_id: number; title: string; lines: Partial<DocLine>[] } | null;
-    clients: PickOption[]; projects: PickOption[]; taxCodes: TaxCode[]; revenueAccounts: PickOption[]; defaultRevenueAccountId: number | null; canCreateClient: boolean;
+    prefill: { client_id: number | null; project_id: number | null; title: string; lead_id?: number; lines: Partial<DocLine>[] } | null;
+    clients: PickOption[]; vendors: PickOption[]; projects: PickOption[]; taxCodes: TaxCode[]; revenueAccounts: PickOption[]; defaultRevenueAccountId: number | null; canCreateClient: boolean;
 }>();
 
-interface LineForm { description: string; quantity: string; unit: string; unit_price: string | number | null; discount: string | number | null; tax_code_id: number | ''; revenue_account_id: number | ''; source_line_id: number | null }
+interface LineForm { description: string; quantity: string; unit: string; unit_price: string | number | null; discount: string | number | null; tax_code_id: number | ''; revenue_account_id: number | ''; source_line_id: number | null; milestone_id: number | null }
 const toLine = (l?: Partial<DocLine>): LineForm => ({
     description: l?.description ?? '', quantity: l?.quantity ?? '1', unit: l?.unit ?? '', unit_price: l?.unit_price ?? '', discount: l?.discount && l.discount !== '0.00' ? l.discount : '',
     tax_code_id: l?.tax_code_id ?? '', revenue_account_id: l?.revenue_account_id ?? (props.defaultRevenueAccountId ?? ''), source_line_id: l?.source_line_id ?? null,
+    milestone_id: l?.milestone_id ?? null,
 });
 const doc = props.document;
 const isQuote = props.type === 'quotation';
 const isCredit = props.type === 'credit_note';
+const isVendor = props.type === 'vendor_po';
+const noRevenue = isQuote || isVendor;
 const in30 = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
 const form = useForm({
     client_id: (doc?.client_id ?? props.prefill?.client_id ?? '') as number | '',
+    vendor_id: (isVendor ? (doc?.counterparty_id ?? '') : '') as number | '',
+    lead_id: (props.prefill?.lead_id ?? null) as number | null,
     project_id: (doc?.project_id ?? props.prefill?.project_id ?? '') as number | '',
     title: doc?.title ?? props.prefill?.title ?? '',
     valid_until: doc?.valid_until ?? (isQuote ? in30 : ''),
@@ -49,11 +54,15 @@ const previews = computed(() => form.lines.map((l) => lineAmounts(String(l.quant
 const totals = computed(() => ({
     subtotal: sumDecimals(previews.value.map((p) => p.net)), tax: sumDecimals(previews.value.map((p) => p.tax)), total: sumDecimals(previews.value.map((p) => p.total)),
 }));
-const clientLabel = computed(() => props.clients.find((c) => c.id === form.client_id)?.label ?? (doc?.client || ''));
+const parties = computed(() => (isVendor ? props.vendors : props.clients));
+const clientLabel = computed(() => (isVendor ? props.vendors.find((v) => v.id === form.vendor_id)?.label : props.clients.find((c) => c.id === form.client_id)?.label) ?? (doc?.client || ''));
 const projectOptions = computed(() => props.projects.filter((p) => !form.client_id || p.client_id === form.client_id));
 
 const picking = ref(false);
-function pick(item: PickerItem) { form.client_id = Number(item.id); form.project_id = ''; picking.value = false; }
+function pick(item: PickerItem) {
+    if (isVendor) form.vendor_id = Number(item.id); else { form.client_id = Number(item.id); form.project_id = ''; }
+    picking.value = false;
+}
 
 const newClient = ref(false);
 const clientForm = useForm({ name: '', registration_no: '', email: '', phone: '', contact_person: '', payment_terms_days: 30, address: { line1: '', city: '', postcode: '', state: '' } });
@@ -70,14 +79,15 @@ function saveClient() {
 
 function submit() {
     const t = form.transform((d) => ({
-        ...d, client_id: d.client_id || null, project_id: d.project_id || null, valid_until: d.valid_until || null, due_date: d.due_date || null,
+        ...d, client_id: isVendor ? undefined : (d.client_id || null), vendor_id: isVendor ? (d.vendor_id || null) : undefined, lead_id: isQuote && !doc ? d.lead_id : undefined,
+        project_id: d.project_id || null, valid_until: d.valid_until || null, due_date: d.due_date || null,
         lines: d.lines.map((l) => ({ ...l, unit_price: String(l.unit_price ?? ''), discount: l.discount === '' || l.discount === null ? null : String(l.discount),
-            tax_code_id: l.tax_code_id || null, revenue_account_id: isQuote ? null : (l.revenue_account_id || null), unit: l.unit || null })),
+            tax_code_id: l.tax_code_id || null, revenue_account_id: noRevenue ? null : (l.revenue_account_id || null), unit: l.unit || null })),
     }));
     if (doc) t.put(route(`commercial.${props.routeBase}.update`, doc.id)); else t.post(route(`commercial.${props.routeBase}.store`));
 }
 const title = computed(() => (doc ? `Edit ${doc.number}` : `New ${props.label.toLowerCase()}`));
-const plural = props.type === 'credit_note' ? 'Credit notes' : `${props.label}s`;
+const plural = props.type === 'credit_note' ? 'Credit notes' : isVendor ? 'Vendor POs' : `${props.label}s`;
 </script>
 
 <template>
@@ -94,8 +104,8 @@ const plural = props.type === 'credit_note' ? 'Credit notes' : `${props.label}s`
                 <div class="grid gap-4 md:grid-cols-3">
                     <FormField
                         id="client"
-                        label="Client"
-                        :error="form.errors.client_id"
+                        :label="isVendor ? 'Vendor' : 'Client'"
+                        :error="form.errors.client_id || (form.errors as Record<string, string>).vendor_id"
                     >
                         <div
                             v-if="isCredit"
@@ -114,10 +124,10 @@ const plural = props.type === 'credit_note' ? 'Credit notes' : `${props.label}s`
                                 data-test="pick-client"
                                 @click="picking = true"
                             >
-                                {{ clientLabel || 'Choose client…' }}
+                                {{ clientLabel || (isVendor ? 'Choose vendor…' : 'Choose client…') }}
                             </button>
                             <Button
-                                v-if="canCreateClient"
+                                v-if="canCreateClient && !isVendor"
                                 type="button"
                                 variant="secondary"
                                 title="New client"
@@ -221,7 +231,7 @@ const plural = props.type === 'credit_note' ? 'Credit notes' : `${props.label}s`
                                 </th><th class="w-36">
                                     Tax
                                 </th><th
-                                    v-if="!isQuote"
+                                    v-if="!noRevenue"
                                     class="w-44"
                                 >
                                     Revenue account
@@ -297,7 +307,7 @@ const plural = props.type === 'credit_note' ? 'Credit notes' : `${props.label}s`
                                     </select>
                                 </td>
                                 <td
-                                    v-if="!isQuote"
+                                    v-if="!noRevenue"
                                     class="py-2 pr-2"
                                 >
                                     <select
@@ -424,8 +434,8 @@ const plural = props.type === 'credit_note' ? 'Credit notes' : `${props.label}s`
 
         <PickerModal
             :open="picking"
-            title="Choose client"
-            :items="clients.map((c) => ({ id: c.id, label: c.label, meta: c.meta }))"
+            :title="isVendor ? 'Choose vendor' : 'Choose client'"
+            :items="parties.map((c) => ({ id: c.id, label: c.label, meta: c.meta }))"
             local-filter
             @close="picking = false"
             @select="pick"

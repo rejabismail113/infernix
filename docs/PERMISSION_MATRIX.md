@@ -106,6 +106,27 @@ Approving a commercial document follows the approval matrix and maker-checker (p
 Owner records a reason). Issuing needs `edit` on the document; voiding needs `approve`. Every export also needs
 `export` on the report's own resource. The PM role currently has nothing it may export.
 
+### As seeded in Prompt 4
+
+| Resource | OWN | FIN | PM | HR | STF | AUD | APP |
+|---|---|---|---|---|---|---|---|
+| leads | view create edit export | view create edit export | view(own) create edit(own) export(own) | – | – | view export | – |
+| projects | view create edit export | view create edit export | view(assigned) create edit(assigned) export(assigned) | view | view(assigned) | view export | – |
+| staff_profiles | view create edit export | view export | view | view create edit export | view(own) edit(own contact) | view export | – |
+| staff_identifiers (reveal) | reveal | – | – | reveal edit | – | – | – |
+| staff_bank | view reveal edit | view reveal | – | view reveal edit | view(own) edit(own) | – | – |
+| engagements | view create edit | view | – | view create edit | view(own) | view | – |
+| timesheets | all | view edit pay export | view(assigned) create(own) approve(assigned) | view export | view/create/edit(own) | view export | – |
+| payment_batches | all | view create edit approve pay export | – | view export | – | view export | approve(assigned) |
+| memos | view create edit export | view(own) | view(own) | view create edit export | view(own) | view | – |
+| letters / appointment_letters | create … | letters only | – | create … | appointment(own view) | view | – |
+| certificates | view create edit export | – | view(own) create edit(own) | view | – | view | – |
+| client_pos | view create edit export | view create edit export | view(own) create edit(own) | – | – | view export | – |
+| vendor_pos | view create edit approve export | view create edit approve export | – | – | – | view export | approve(assigned) |
+
+Identifiers and bank numbers are masked for every role in every list, detail and export; reveals are audited and need
+recent re-auth (A-59). The full payroll handoff also needs MFA re-auth (A-58).
+
 ## M02 Projects & Training
 
 | Resource | OWN | FIN | PM | HR | STF | AUD | APP |

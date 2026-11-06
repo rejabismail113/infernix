@@ -6,10 +6,10 @@ export interface DocRow {
 }
 export interface DocLine {
     id?: number; line_no?: number; description: string; quantity: string; unit: string | null; unit_price: string; discount: string;
-    tax_code_id: number | null; tax_rate?: string; net_amount?: string; tax_amount?: string; line_total?: string; revenue_account_id: number | null; source_line_id?: number | null;
+    tax_code_id: number | null; tax_rate?: string; net_amount?: string; tax_amount?: string; line_total?: string; revenue_account_id: number | null; source_line_id?: number | null; milestone_id?: number | null;
 }
 export interface DocDetail extends DocRow {
-    client_id: number | null; counterparty: Record<string, unknown> | null; project: { id: number; code: string; name: string; client_id: number; contract_value: string } | null;
+    client_id: number | null; counterparty_id: number | null; counterparty_type: string; external_ref: string | null; subject: string | null; body: string | null; effective_date: string | null; counterparty: Record<string, unknown> | null; project: { id: number; code: string; name: string; client_id: number; contract_value: string } | null;
     project_id: number | null; terms: string | null; internal_notes: string | null; subtotal: string; discount_total: string; tax_total: string;
     amount_received: string; amount_credited: string; current_level: number; void_reason: string | null; voided_at: string | null; issued_at: string | null;
     source_type: string; source_id: number | null; related_document_id: number | null; supersedes_id: number | null; pdf_document_id: number | null;

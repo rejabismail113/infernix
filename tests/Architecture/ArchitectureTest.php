@@ -63,3 +63,12 @@ arch('Projects and Reporting never write through other modules\' models')
     ->expect('App\Modules\Projects')->not->toUse(['App\Modules\Commercial\Models', 'App\Modules\Commercial\Services', 'App\Modules\Finance'])
     ->and('App\Modules\Reporting')->not->toUse(['App\Modules\Commercial\Models', 'App\Modules\Commercial\Services', 'App\Modules\Finance\Models', 'App\Modules\Finance\Services'])
     ->group('M11-05');
+
+arch('HR reaches Finance only through LedgerGateway and Projects only through kernel contracts')
+    ->expect('App\Modules\HumanResources')->not->toUse(['App\Modules\Finance\Models', 'App\Modules\Finance\Posting', 'App\Modules\Finance\Services\PostingService', 'App\Modules\Projects', 'App\Modules\Commercial\Models', 'App\Modules\Commercial\Services'])
+    ->group('M04-03', 'WF-05');
+
+arch('Projects never import HR or Commercial models/services (staff and certificates via kernel contracts)')
+    ->expect('App\Modules\Projects')->not->toUse(['App\Modules\HumanResources', 'App\Modules\Commercial\Models', 'App\Modules\Commercial\Services'])
+    ->and('App\Modules\Commercial')->not->toUse(['App\Modules\HumanResources'])
+    ->group('M02-07', 'M03-06');

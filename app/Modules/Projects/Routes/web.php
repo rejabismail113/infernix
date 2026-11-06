@@ -29,12 +29,12 @@ Route::middleware(['web', 'app'])->prefix('projects')->name('projects.')->group(
     Route::put('{project}', [ProjectController::class, 'update'])->whereNumber('project')->name('projects.update');
     Route::post('{project}/status', [ProjectController::class, 'status'])->whereNumber('project')->name('projects.status');
     Route::post('{project}/closeout', [ProjectController::class, 'closeout'])->whereNumber('project')->name('projects.closeout');
-    Route::post('{project}/members', [ProjectController::class, 'addMember'])->whereNumber('project')->name('projects.members.store');
-    Route::post('members/{member}/end', [ProjectController::class, 'endMember'])->name('projects.members.end');
-    Route::post('{project}/milestones', [ProjectController::class, 'storeMilestone'])->whereNumber('project')->name('projects.milestones.store');
-    Route::put('milestones/{milestone}', [ProjectController::class, 'updateMilestone'])->name('projects.milestones.update');
-    Route::post('milestones/{milestone}/tasks', [ProjectController::class, 'storeTask'])->name('projects.tasks.store');
-    Route::put('tasks/{task}', [ProjectController::class, 'updateTask'])->name('projects.tasks.update');
+    Route::post('{project}/members', [ProjectController::class, 'addMember'])->whereNumber('project')->name('members.store');
+    Route::post('members/{member}/end', [ProjectController::class, 'endMember'])->name('members.end');
+    Route::post('{project}/milestones', [ProjectController::class, 'storeMilestone'])->whereNumber('project')->name('milestones.store');
+    Route::put('milestones/{milestone}', [ProjectController::class, 'updateMilestone'])->name('milestones.update');
+    Route::post('milestones/{milestone}/tasks', [ProjectController::class, 'storeTask'])->name('tasks.store');
+    Route::put('tasks/{task}', [ProjectController::class, 'updateTask'])->name('tasks.update');
 
     Route::post('{project}/sessions', [TrainingController::class, 'store'])->whereNumber('project')->name('sessions.store');
     Route::get('sessions/{session}', [TrainingController::class, 'show'])->name('sessions.show');

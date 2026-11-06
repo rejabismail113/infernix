@@ -20,7 +20,9 @@ final class IssuerProfile
     {
         $company = Company::current();
         $bank = CompanyBankAccount::query()->where('company_id', $company->id)->where('active', true)->orderByDesc('is_default')->orderBy('id')->first();
-        $logo = public_path('images/infernix-logo.svg');
+        // Letterhead mark: the Infernix phoenix (A-99). The company name is printed beside it by every template.
+        $source = 'images/infernix-workspace-icon.png';
+        $logo = public_path($source);
 
         return [
             'name' => $company->name,
@@ -32,7 +34,7 @@ final class IssuerProfile
             'signatory_title' => $company->signatory_title,
             // The company's own receiving account is printed on invoices so clients can pay; it is not a secret.
             'bank' => $bank === null ? null : ['bank_name' => $bank->bank_name, 'account_name' => $bank->account_name, 'account_no' => $bank->account_no],
-            'logo' => ['source' => 'images/infernix-logo.svg', 'sha256' => is_file($logo) ? hash_file('sha256', $logo) : null],
+            'logo' => ['source' => $source, 'sha256' => is_file($logo) ? hash_file('sha256', $logo) : null],
             'captured_at' => now()->toIso8601String(),
         ];
     }

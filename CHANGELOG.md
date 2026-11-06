@@ -7,6 +7,8 @@ phases of INF-SRS-001 (P1 … P4). Requirement IDs refer to docs/SRS.md; decisio
 ### Changed
 - Product renamed **Infernix Workspace**: redesigned sign-in screens (frosted card, orange waves, phoenix logo), new
   sidebar logo, favicon, page titles, emails and MFA issuer. Company documents keep the Infernix Evolv Hub name.
+- Quotations, invoices, letters and certificates issued from now on carry the phoenix logo above the company name;
+  documents already issued are unchanged.
 
 ## [1.0.0-rc1] — 2026-11-06 — Phase P4 (Prompt 6): hardening, integrations, handover
 

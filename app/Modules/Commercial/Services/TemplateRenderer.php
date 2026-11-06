@@ -86,7 +86,7 @@ final class TemplateRenderer
             'detailed' => $detailed,
             'issuer' => $issuer,
             'counterparty' => $doc->counterparty_snapshot ?? [],
-            'logo' => is_file($logoPath) ? 'data:image/svg+xml;base64,'.base64_encode((string) file_get_contents($logoPath)) : null,
+            'logo' => self::logoDataUri($logoPath),
             'doc' => [
                 'label' => $type->label(), 'number' => $doc->document_no, 'revision' => $doc->revision_no, 'title' => $doc->title,
                 'issue_date' => $doc->issue_date?->format('d/m/Y'), 'due_date' => $doc->due_date?->format('d/m/Y'), 'valid_until' => $doc->valid_until?->format('d/m/Y'),
@@ -150,5 +150,24 @@ final class TemplateRenderer
         $doc->setAttribute('type', $type);
 
         return view($version->view_name, $this->viewModel($doc, $version, false))->render();
+    }
+
+    /**
+     * Inline the letterhead logo as a data URI (no network fetch while rendering). Older snapshots point at the
+     * SVG wordmark, newer ones at the PNG phoenix — the MIME type follows the file, so re-rendering an old
+     * document's preview still shows the logo it was issued with.
+     */
+    private static function logoDataUri(string $path): ?string
+    {
+        if (! is_file($path)) {
+            return null;
+        }
+        $mime = match (strtolower(pathinfo($path, PATHINFO_EXTENSION))) {
+            'png' => 'image/png',
+            'jpg', 'jpeg' => 'image/jpeg',
+            default => 'image/svg+xml',
+        };
+
+        return 'data:'.$mime.';base64,'.base64_encode((string) file_get_contents($path));
     }
 }

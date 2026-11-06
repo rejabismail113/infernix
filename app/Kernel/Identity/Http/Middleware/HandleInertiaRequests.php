@@ -30,6 +30,7 @@ final class HandleInertiaRequests extends Middleware
             ['Projects', 'projects.projects.index', 'projects', 'view', 'Projects', 'list'],
             ['Letters & memos', 'commercial.generated.index', 'letters', 'view', 'Sales', 'document'],
             ['Document templates', 'commercial.templates.index', 'document_templates', 'view', 'Sales', 'settings'],
+            ['e-Invoice', 'commercial.einvoice.index', 'invoices', 'view', 'Sales', 'upload'],
             ['Finance overview', 'finance.overview', 'claims', 'view', 'Finance', 'chart'],
             ['Claims', 'finance.claims.index', 'claims', 'view', 'Finance', 'audit'],
             ['Expenses & income', 'finance.transactions.index', 'transactions', 'view', 'Finance', 'swap'],

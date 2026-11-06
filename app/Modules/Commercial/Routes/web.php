@@ -6,6 +6,7 @@ use App\Modules\Commercial\Http\Controllers\CertificateVerifyController;
 use App\Modules\Commercial\Http\Controllers\ClientPoController;
 use App\Modules\Commercial\Http\Controllers\CommercialReportController;
 use App\Modules\Commercial\Http\Controllers\DocumentController;
+use App\Modules\Commercial\Http\Controllers\EInvoiceController;
 use App\Modules\Commercial\Http\Controllers\GeneratedDocumentController;
 use App\Modules\Commercial\Http\Controllers\ReceiptController;
 use App\Modules\Commercial\Http\Controllers\TemplateController;
@@ -18,6 +19,8 @@ use Illuminate\Support\Facades\Route;
  * @see SRS M03-01 … M03-08
  */
 Route::middleware(['web', 'app'])->prefix('commercial')->name('commercial.')->group(function (): void {
+    Route::get('einvoice', [EInvoiceController::class, 'index'])->name('einvoice.index');
+    Route::post('einvoice/{outbox}/retry', [EInvoiceController::class, 'retry'])->name('einvoice.retry');
     foreach (['quotation' => 'quotations', 'invoice' => 'invoices', 'credit_note' => 'credit-notes', 'vendor_po' => 'vendor-pos'] as $type => $base) {
         Route::prefix($base)->name($base.'.')->group(function () use ($type): void {
             Route::get('/', [DocumentController::class, 'index'])->name('index')->defaults('docType', $type);

@@ -93,6 +93,15 @@ return [
         'onepassword' => ['connect_url' => env('OP_CONNECT_HOST'), 'token' => env('OP_CONNECT_TOKEN'), 'vault_id' => env('OP_VAULT_ID')],
     ],
 
+    // Optional MyInvois / e-Invoice (features.myinvois). Eligibility and fields need accountant verification (A-82).
+    'einvoice' => [
+        'rate_per_minute' => (int) env('EINVOICE_RATE_PER_MINUTE', 30),
+        'max_attempts' => (int) env('EINVOICE_MAX_ATTEMPTS', 6),
+        'backoff_seconds' => (int) env('EINVOICE_BACKOFF_SECONDS', 60),
+        'stub_fail_times' => 0,
+        'supplier_tin' => env('EINVOICE_SUPPLIER_TIN'), // PLACEHOLDER — the company's LHDN TIN
+    ],
+
     'pdf' => ['driver' => env('PDF_DRIVER', 'browsershot')],
     'features' => [
         'myinvois' => (bool) env('FEATURE_MYINVOIS', false),

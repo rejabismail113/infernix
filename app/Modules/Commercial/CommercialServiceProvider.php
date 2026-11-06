@@ -14,7 +14,11 @@ use App\Kernel\Documents\LinkableEntityType;
 use App\Kernel\Notifications\PendingApprovalRegistry;
 use App\Kernel\Reports\ReportCatalog;
 use App\Kernel\Reports\ReportDefinition;
+use App\Modules\Commercial\EInvoice\EInvoiceGateway;
+use App\Modules\Commercial\EInvoice\EnqueueIssuedInvoice;
+use App\Modules\Commercial\EInvoice\StubEInvoiceGateway;
 use App\Modules\Commercial\Enums\DocumentStatus;
+use App\Modules\Commercial\Events\DocumentIssued;
 use App\Modules\Commercial\Models\AppointmentLetter;
 use App\Modules\Commercial\Models\Certificate;
 use App\Modules\Commercial\Models\ClientPurchaseOrder;
@@ -48,6 +52,7 @@ use App\Modules\Commercial\Services\GeneratorService;
 use App\Modules\Commercial\Services\PdfRenderer;
 use App\Modules\Commercial\Services\VendorPurchaseOrderService;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -67,10 +72,13 @@ final class CommercialServiceProvider extends ServiceProvider
         $this->app->bind(GeneratedDocumentIssuer::class, GeneratorService::class);
         $this->app->bind(HtmlToPdf::class, PdfRenderer::class);
         $this->app->bind(VendorPurchaseOrders::class, VendorPurchaseOrderService::class);
+        // Only the stub exists until MyInvois obligations are confirmed by the accountant (A-82).
+        $this->app->bind(EInvoiceGateway::class, StubEInvoiceGateway::class);
     }
 
     public function boot(): void
     {
+        Event::listen(DocumentIssued::class, EnqueueIssuedInvoice::class);
         $this->loadMigrationsFrom(__DIR__.'/Database/Migrations');
         $this->loadRoutesFrom(__DIR__.'/Routes/web.php');
 

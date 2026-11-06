@@ -6,6 +6,7 @@ use App\Kernel\Notifications\Jobs\NotifyPendingApprovals;
 use App\Modules\Assets\Jobs\NotifyWarrantyExpiries;
 use App\Modules\Certifications\Jobs\NotifyRenewals;
 use App\Modules\Commercial\Jobs\NotifyOverdueInvoices;
+use App\Modules\Commercial\Jobs\ProcessEInvoiceOutbox;
 use App\Modules\Credentials\Jobs\NotifyCredentialRotations;
 use App\Modules\Procurement\Jobs\RunSubscriptionRenewalAlerts;
 use App\Modules\Reporting\Jobs\SendScheduledReports;
@@ -22,3 +23,4 @@ Schedule::job(new NotifyRenewals)->dailyAt('07:50')->name('certification-renewal
 Schedule::job(new NotifyWarrantyExpiries)->dailyAt('08:00')->name('warranty-expiries')->withoutOverlapping();
 Schedule::job(new NotifyCredentialRotations)->dailyAt('08:30')->name('credential-rotations')->withoutOverlapping();
 Schedule::job(new SendScheduledReports)->dailyAt('06:50')->name('scheduled-reports')->withoutOverlapping();
+Schedule::job(new ProcessEInvoiceOutbox)->everyMinute()->name('einvoice-outbox')->withoutOverlapping()->when(fn () => (bool) config('infernix.features.myinvois'));

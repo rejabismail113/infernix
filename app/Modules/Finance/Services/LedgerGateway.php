@@ -145,6 +145,29 @@ final class LedgerGateway
         ]), $actor)->id;
     }
 
+    /**
+     * Opening balances at go-live (§9.1 data migration): ONE balanced journal (source opening_balance) from a
+     * trial balance brought forward. Every account must be postable; PostingService enforces balance + open period.
+     *
+     * @param  list<array{account_code: string, debit: string, credit: string, description?: string|null}>  $lines
+     */
+    public function postOpeningBalances(Carbon $date, array $lines, User $actor): int
+    {
+        $drafts = [];
+        foreach ($lines as $i => $l) {
+            $account = ChartAccount::query()->where('code', $l['account_code'])->where('is_postable', true)->where('active', true)->first()
+                ?? throw new PostingRejected('Row '.($i + 2).": account {$l['account_code']} does not exist or is not postable.");
+            $dr = Money::myr($l['debit'] === '' ? '0' : $l['debit']);
+            $cr = Money::myr($l['credit'] === '' ? '0' : $l['credit']);
+            if ($dr->isPositive() === $cr->isPositive()) {
+                throw new PostingRejected('Row '.($i + 2).': enter either a debit or a credit.');
+            }
+            $drafts[] = $dr->isPositive() ? JournalLineDraft::debit($account->id, $dr, $l['description'] ?? 'Opening balance') : JournalLineDraft::credit($account->id, $cr, $l['description'] ?? 'Opening balance');
+        }
+
+        return $this->posting->post(new JournalDraft($date, 'opening_balance', null, 'Opening balances brought forward', $drafts), $actor)->id;
+    }
+
     /** Reverse a journal this gateway posted (void invoice / credit note / receipt). Returns the reversal id. */
     public function reverse(int $journalId, User $actor, string $reason): int
     {

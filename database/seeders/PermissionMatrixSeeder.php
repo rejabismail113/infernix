@@ -38,6 +38,7 @@ final class PermissionMatrixSeeder extends Seeder
             'notification_rules' => ['OWN' => 'view:all create:all edit:all', 'FIN' => 'view:all create:all edit:all', 'HR' => 'view:all edit:all'],
             'audit_log' => ['OWN' => 'view:all export:all', 'FIN' => 'view:all', 'AUD' => 'view:all export:all'],
             'backup_status' => ['OWN' => 'view:all approve:all', 'AUD' => 'view:all'],
+            'data_import' => ['OWN' => 'create:all'],
             'reports_access' => ['OWN' => 'view:all export:all', 'HR' => 'view:all', 'AUD' => 'view:all export:all'],
             // M01 Finance (Prompt 2)
             'chart_accounts' => ['OWN' => 'view:all create:all edit:all', 'FIN' => 'view:all create:all edit:all', 'AUD' => 'view:all export:all'],

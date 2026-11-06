@@ -70,6 +70,7 @@ final class HandleInertiaRequests extends Middleware
             ['Notification rules', 'admin.notification-rules.index', 'notification_rules', 'view', 'Administration', 'bell'],
             ['Audit log', 'admin.audit-log.index', 'audit_log', 'view', 'Administration', 'audit'],
             ['Backups', 'admin.backups.index', 'backup_status', 'view', 'Administration', 'download'],
+            ['Data import', 'admin.imports.index', 'data_import', 'create', 'Administration', 'upload'],
             ['Access reports', 'admin.reports.user-access', 'reports_access', 'view', 'Administration', 'report'],
         ];
         $nav = [['label' => __('Dashboard'), 'href' => route('dashboard'), 'group' => __('Overview'), 'icon' => 'home']];
@@ -107,6 +108,7 @@ final class HandleInertiaRequests extends Middleware
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),
                 'import' => $request->session()->get('import'),
+                'data_import' => $request->session()->get('data_import'),
             ],
         ];
     }

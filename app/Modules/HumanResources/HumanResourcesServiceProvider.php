@@ -14,6 +14,8 @@ use App\Kernel\Notifications\PendingApprovalRegistry;
 use App\Kernel\People\Contracts\StaffDirectory;
 use App\Kernel\Reports\ReportCatalog;
 use App\Kernel\Reports\ReportDefinition;
+use App\Kernel\Search\SearchIndexer;
+use App\Kernel\Search\SearchRegistry;
 use App\Modules\Commercial\Events\DocumentIssued;
 use App\Modules\HumanResources\Listeners\DeliverMemoToInbox;
 use App\Modules\HumanResources\Models\Engagement;
@@ -29,6 +31,7 @@ use App\Modules\HumanResources\Policies\StaffProfilePolicy;
 use App\Modules\HumanResources\Policies\TimesheetPolicy;
 use App\Modules\HumanResources\Reports\HrReports;
 use App\Modules\HumanResources\Services\StaffDirectoryService;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -61,6 +64,9 @@ final class HumanResourcesServiceProvider extends ServiceProvider
         $can = fn (User $u, PermissionAction $a, string $r): bool => app(PermissionService::class)->canOnAll($u, $a, $r);
         Gate::define('reveal-staff-identifier', fn (User $u): bool => $can($u, PermissionAction::Reveal, 'staff_identifiers'));
         Gate::define('reveal-staff-bank', fn (User $u): bool => $can($u, PermissionAction::Reveal, 'staff_bank'));
+        // Global search (G-11): name, staff no and position only — never the identity number or bank details.
+        $this->app->make(SearchRegistry::class)->register('staff', StaffProfile::class, 'Staff', fn (Model $s): string => route('hr.staff.show', $s->getKey()));
+        StaffProfile::saved(fn (StaffProfile $s) => app(SearchIndexer::class)->index('staff', $s->id, trim($s->staff_no.' '.$s->displayName()), $s->position, 'HR'));
         Gate::define('edit-staff-bank', fn (User $u): bool => $can($u, PermissionAction::Edit, 'staff_bank'));
 
         Event::listen(DocumentIssued::class, DeliverMemoToInbox::class);

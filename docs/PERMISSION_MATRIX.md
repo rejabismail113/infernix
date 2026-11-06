@@ -17,7 +17,7 @@ for `reveal`, period lock/unlock, permission changes and payments above the conf
 ## Resource keys (as seeded in `permissions.resource`)
 
 `users`, `permissions`, `delegations`, `company`, `fiscal_periods`, `numbering`, `dictionaries`,
-`notification_rules`, `audit_log`, `backup_status`, `reports_access`, `documents` — seeded by
+`notification_rules`, `audit_log`, `backup_status`, `reports_access`, `documents`, `approval_matrix`, `data_import` — seeded by
 `database/seeders/PermissionMatrixSeeder.php` (Prompt 1a). Later prompts append their resources
 (`documents`, `claims`, `journals`, …). The table below is the human-readable source; the seeder must match it.
 
@@ -27,7 +27,8 @@ for `reveal`, period lock/unlock, permission changes and payments above the conf
 |---|---|---|---|---|---|---|---|
 | users / invitations / deactivation | view create edit delete | view | – | view create edit (STF/PM users only) | view(O) edit(O profile) | view | – |
 | roles & permission matrix | view edit | view | – | – | – | view | – |
-| approval matrix & delegations | view create edit | view | – | – | – | view | view(S) |
+| approval matrix (`approval_matrix`, Prompt 6: versioned editor) | view edit | – | – | – | – | view | – |
+| delegations | view create edit | view create(O) edit(O) | view(O) create(O) edit(O) | view(O) create(O) edit(O) | – | view | view(S) |
 | company profile, bank accounts, signatory | view edit | view edit(bank accounts) | – | view | – | view | – |
 | fiscal years / periods, lock & unlock | view edit approve(lock) | view edit approve(lock) | – | – | – | view | – |
 | numbering sequences | view edit | view | – | – | – | view | – |
@@ -35,6 +36,7 @@ for `reveal`, period lock/unlock, permission changes and payments above the conf
 | notification rules | view edit | view edit | – | view edit (HR events) | – | – | – |
 | audit log | view export | view(finance entities) | – | – | – | view export | – |
 | backup status / restore exercise | view approve | – | – | – | – | view | – |
+| data import (`data_import`, Prompt 6) | create | – | – | – | – | – | – |
 | user access report / policy history | view export | – | – | view | – | view export | – |
 
 ## M06 Document Centre
@@ -248,6 +250,8 @@ rows are listed and owner-only.
 | `activities.activities.status` | POST | `activities/{activity}/status` | V | V | D | D | D | D | D |
 | `activities.activities.store` | POST | `activities` | V | D | V | D | V | D | D |
 | `activities.activities.update` | PUT | `activities/{activity}` | V | V | D | D | D | D | D |
+| `admin.approval-matrix.index` | GET | `admin/approval-matrix` | A | D | D | D | D | A | D |
+| `admin.approval-matrix.store` | POST | `admin/approval-matrix` | V | D | D | D | D | D | D |
 | `admin.audit-log.export` | GET | `admin/audit-log/export` | A | D | D | D | D | A | D |
 | `admin.audit-log.index` | GET | `admin/audit-log` | A | A | D | D | D | A | D |
 | `admin.backups.index` | GET | `admin/backups` | A | D | D | D | D | A | D |

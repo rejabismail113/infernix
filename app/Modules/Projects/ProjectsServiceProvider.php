@@ -11,6 +11,8 @@ use App\Kernel\Documents\LinkableEntityType;
 use App\Kernel\Identity\Models\User;
 use App\Kernel\Reports\ReportCatalog;
 use App\Kernel\Reports\ReportDefinition;
+use App\Kernel\Search\SearchIndexer;
+use App\Kernel\Search\SearchRegistry;
 use App\Modules\Commercial\Events\ProjectBillingChanged;
 use App\Modules\Projects\Listeners\UpdateProjectPaymentStatus;
 use App\Modules\Projects\Models\Client;
@@ -22,6 +24,7 @@ use App\Modules\Projects\Policies\ProjectPolicy;
 use App\Modules\Projects\Reports\ProjectsReports;
 use App\Modules\Projects\Services\ClientsDirectory;
 use App\Modules\Projects\Services\ProjectsDirectory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -50,6 +53,12 @@ final class ProjectsServiceProvider extends ServiceProvider
         Gate::policy(Client::class, ClientPolicy::class);
         Gate::policy(Project::class, ProjectPolicy::class);
         Gate::policy(Lead::class, LeadPolicy::class);
+        // Global search (G-11): every hit is re-checked against the record policy by SearchService.
+        $search = $this->app->make(SearchRegistry::class);
+        $search->register('project', Project::class, 'Project', fn (Model $p): string => route('projects.projects.show', $p->getKey()));
+        $search->register('client', Client::class, 'Client', fn (Model $c): string => route('projects.clients.index', ['q' => $c->getAttribute('name')]));
+        Project::saved(fn (Project $p) => app(SearchIndexer::class)->index('project', $p->id, trim($p->code.' '.$p->name), $p->description, 'Projects'));
+        Client::saved(fn (Client $c) => app(SearchIndexer::class)->index('client', $c->id, $c->name, trim(($c->registration_no ?? '').' '.($c->contact_person ?? '')), 'Projects'));
         Event::listen(ProjectBillingChanged::class, UpdateProjectPaymentStatus::class);
 
         $catalog = $this->app->make(ReportCatalog::class);

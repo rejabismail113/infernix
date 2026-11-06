@@ -14,10 +14,13 @@ use App\Kernel\Documents\LinkableEntityType;
 use App\Kernel\Notifications\PendingApprovalRegistry;
 use App\Kernel\Reports\ReportCatalog;
 use App\Kernel\Reports\ReportDefinition;
+use App\Kernel\Search\SearchIndexer;
+use App\Kernel\Search\SearchRegistry;
 use App\Modules\Commercial\EInvoice\EInvoiceGateway;
 use App\Modules\Commercial\EInvoice\EnqueueIssuedInvoice;
 use App\Modules\Commercial\EInvoice\StubEInvoiceGateway;
 use App\Modules\Commercial\Enums\DocumentStatus;
+use App\Modules\Commercial\Enums\DocumentType;
 use App\Modules\Commercial\Events\DocumentIssued;
 use App\Modules\Commercial\Models\AppointmentLetter;
 use App\Modules\Commercial\Models\Certificate;
@@ -48,9 +51,11 @@ use App\Modules\Commercial\Policies\VendorPurchaseOrderPolicy;
 use App\Modules\Commercial\Policies\VoucherDocumentPolicy;
 use App\Modules\Commercial\Reports\CommercialReports;
 use App\Modules\Commercial\Services\CommercialIssuedDocumentRenderer;
+use App\Modules\Commercial\Services\DocumentRegistry;
 use App\Modules\Commercial\Services\GeneratorService;
 use App\Modules\Commercial\Services\PdfRenderer;
 use App\Modules\Commercial\Services\VendorPurchaseOrderService;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -79,6 +84,15 @@ final class CommercialServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Event::listen(DocumentIssued::class, EnqueueIssuedInvoice::class);
+        // Global search (G-11) for client / vendor documents; SearchService re-checks the document policy per hit.
+        $search = $this->app->make(SearchRegistry::class);
+        foreach (['quotation' => 'quotations', 'invoice' => 'invoices', 'credit_note' => 'credit-notes', 'vendor_po' => 'vendor-pos'] as $type => $base) {
+            $model = DocumentRegistry::modelFor(DocumentType::from($type));
+            $search->register($type, $model, ucwords(str_replace('_', ' ', $type)), fn (Model $d): string => route("commercial.{$base}.show", $d->getKey()));
+            $model::saved(function (CommercialDocument $d) use ($type): void {
+                app(SearchIndexer::class)->index($type, $d->id, trim(($d->document_no ?? 'Draft '.$d->id).' '.($d->title ?? '')), $d->external_ref, 'Commercial');
+            });
+        }
         $this->loadMigrationsFrom(__DIR__.'/Database/Migrations');
         $this->loadRoutesFrom(__DIR__.'/Routes/web.php');
 

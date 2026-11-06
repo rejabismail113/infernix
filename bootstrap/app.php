@@ -65,7 +65,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 return $response;
             }
 
-            return Inertia::render('Errors/Show', ['status' => $status])
+            return Inertia::render('Errors/Show', ['status' => $status, 'requestId' => $request->attributes->get('request_id')])
                 ->toResponse($request)
                 ->setStatusCode($status);
         });

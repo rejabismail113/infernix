@@ -62,6 +62,7 @@ final class HandleInertiaRequests extends Middleware
             ['Document reports', 'documents.reports.inventory', 'documents', 'view', 'Documents', 'report'],
             ['Users', 'admin.users.index', 'users', 'view', 'Administration', 'users'],
             ['Permissions', 'admin.permissions.index', 'permissions', 'view', 'Administration', 'shield'],
+            ['Approval matrix', 'admin.approval-matrix.index', 'approval_matrix', 'view', 'Administration', 'swap'],
             ['Delegations', 'admin.delegations.index', 'delegations', 'view', 'Administration', 'swap'],
             ['Company', 'admin.company.edit', 'company', 'view', 'Administration', 'building'],
             ['Fiscal periods', 'admin.fiscal-periods.index', 'fiscal_periods', 'view', 'Administration', 'calendar'],

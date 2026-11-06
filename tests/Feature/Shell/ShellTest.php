@@ -10,11 +10,13 @@ use Illuminate\Support\Facades\Storage;
 it('renders the Inertia 403 page for forbidden routes, with the 403 status kept', function (): void {
     $res = actingAsSatisfied(userWithRoles('STF'))->get(route('admin.audit-log.index'))->assertForbidden();
     expect($res->viewData('page')['component'])->toBe('Errors/Show')
-        ->and($res->viewData('page')['props']['status'])->toBe(403);
+        ->and($res->viewData('page')['props']['status'])->toBe(403)
+        // The page shows the request ID users quote when reporting a problem (NFR-10).
+        ->and($res->viewData('page')['props']['requestId'])->toBe($res->headers->get('X-Request-Id'))->not->toBeNull();
 
     // A JSON client still gets a JSON 403, not an HTML page.
     actingAsSatisfied(userWithRoles('STF'))->getJson(route('admin.audit-log.index'))->assertForbidden()->assertJsonStructure(['message']);
-})->group('NFR-02', 'NFR-09');
+})->group('NFR-02', 'NFR-09', 'NFR-10');
 
 it('renders the Inertia 404 page for missing records', function (): void {
     $res = actingAsSatisfied(ownerUser())->get('/admin/users/999999')->assertNotFound();

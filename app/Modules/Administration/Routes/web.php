@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Kernel\Identity\Http\Middleware\RequireRecentAuth;
 use App\Modules\Administration\Http\Controllers\AccessReportController;
+use App\Modules\Administration\Http\Controllers\ApprovalMatrixController;
 use App\Modules\Administration\Http\Controllers\AuditLogController;
 use App\Modules\Administration\Http\Controllers\BackupController;
 use App\Modules\Administration\Http\Controllers\CompanyController;
@@ -33,6 +34,9 @@ Route::middleware(['web', 'app'])->prefix('admin')->name('admin.')->group(functi
 
     Route::get('permissions', [PermissionController::class, 'index'])->name('permissions.index');
     Route::put('permissions', [PermissionController::class, 'update'])->middleware(RequireRecentAuth::class)->name('permissions.update');
+
+    Route::get('approval-matrix', [ApprovalMatrixController::class, 'index'])->name('approval-matrix.index');
+    Route::post('approval-matrix', [ApprovalMatrixController::class, 'store'])->middleware(RequireRecentAuth::class)->name('approval-matrix.store');
 
     Route::get('delegations', [DelegationController::class, 'index'])->name('delegations.index');
     Route::post('delegations', [DelegationController::class, 'store'])->name('delegations.store');

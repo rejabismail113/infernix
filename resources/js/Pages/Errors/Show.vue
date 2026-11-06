@@ -4,7 +4,7 @@ import { computed } from 'vue';
 import Icon from '@/Components/Icon.vue';
 import type { SharedProps } from '@/types';
 
-const props = defineProps<{ status: number; message?: string | null }>();
+const props = defineProps<{ status: number; message?: string | null; requestId?: string | null }>();
 const page = usePage<SharedProps>();
 const copy = computed(() => ({
     403: { title: 'Access denied', text: 'You do not have permission to view this page or record. If you think you should, ask the Owner to review your role.' },
@@ -34,6 +34,12 @@ const copy = computed(() => ({
             </h1>
             <p class="mt-2 text-sm text-surface-600">
                 {{ copy.text }}
+            </p>
+            <p
+                v-if="requestId"
+                class="mt-3 text-xs text-surface-500"
+            >
+                Reference: <code class="select-all">{{ requestId }}</code>
             </p>
             <Link
                 :href="page.props.auth?.user ? '/' : '/login'"

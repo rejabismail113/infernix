@@ -21,6 +21,10 @@ return [
     // M11-05: an auditor's export is an audited Export Centre record, A-37).
     'read_only_role_write_exceptions' => ['tax_review', 'exports'],
 
+    // M04 / UAT-07: roles that may book time to projects they are not assigned to (the entry is flagged as an
+    // exception and audited). PLACEHOLDER — confirm with the owner.
+    'timesheets' => ['unassigned_exception_roles' => ['OWN']],
+
     // Dev/test-only fake sentinel used by leak tests (UAT-08, M13-05). Never a real secret.
     'secret_sentinel' => env('SECRET_SENTINEL', 'SENTINEL-DO-NOT-LEAK-9f3a7c1e'),
 
@@ -57,7 +61,7 @@ return [
         ],
         'link_types' => [
             'attachment', 'receipt', 'invoice', 'contract', 'agreement', 'nda', 'photo', 'evidence', 'warranty',
-            'certificate', 'report', 'logo', 'signature', 'ssm_registration', 'issued_document', 'client_po', 'export_file', 'other',
+            'certificate', 'report', 'logo', 'signature', 'ssm_registration', 'issued_document', 'client_po', 'export_file', 'memo', 'appointment', 'other',
         ],
         // Linking with these types freezes the document (issued commercial documents never change, M03-07).
         'freezing_link_types' => ['issued_document'],

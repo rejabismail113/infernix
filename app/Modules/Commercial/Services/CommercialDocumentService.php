@@ -8,6 +8,7 @@ use App\Kernel\Approval\ApprovalService;
 use App\Kernel\Audit\Audit;
 use App\Kernel\Crm\Contracts\ClientDirectory;
 use App\Kernel\Crm\Contracts\ProjectDirectory;
+use App\Kernel\Crm\Contracts\VendorDirectory;
 use App\Kernel\Identity\Models\User;
 use App\Kernel\Money\Money;
 use App\Kernel\Numbering\Services\NumberingService;
@@ -46,6 +47,7 @@ final class CommercialDocumentService
         private readonly NumberingService $numbering,
         private readonly ApprovalService $approvals,
         private readonly ClientDirectory $clients,
+        private readonly VendorDirectory $vendors,
         private readonly ProjectDirectory $projects,
         private readonly LedgerGateway $ledger,
         private readonly IssuerProfile $issuer,
@@ -54,7 +56,7 @@ final class CommercialDocumentService
     ) {}
 
     /**
-     * @param  array{client_id?: int|null, project_id?: int|null, title?: string|null, terms?: string|null, internal_notes?: string|null, valid_until?: string|null, due_date?: string|null, lines: list<array<string, mixed>>, source_type?: string, source_id?: int|null, related_document_id?: int|null}  $data
+     * @param  array{client_id?: int|null, project_id?: int|null, title?: string|null, terms?: string|null, internal_notes?: string|null, valid_until?: string|null, due_date?: string|null, lines: list<array<string, mixed>>, source_type?: string, source_id?: int|null, related_document_id?: int|null, vendor_id?: int|null, lead_id?: int|null}  $data
      */
     public function createDraft(DocumentType $type, array $data, User $actor): CommercialDocument
     {
@@ -64,13 +66,14 @@ final class CommercialDocumentService
 
         return DB::transaction(function () use ($type, $data, $actor): CommercialDocument {
             $class = DocumentRegistry::modelFor($type);
-            $client = $this->clientSnapshot($data['client_id'] ?? null);
+            $vendorPo = $type === DocumentType::VendorPo;
+            $client = $vendorPo ? $this->vendorSnapshot($data['vendor_id'] ?? null) : $this->clientSnapshot($data['client_id'] ?? null);
             $settings = $this->templates->currentVersion($type)->settings;
             /** @var CommercialDocument $doc */
             $doc = new $class;
             $doc->forceFill([
-                'company_id' => $actor->company_id, 'status' => DocumentStatus::Draft, 'counterparty_type' => 'client',
-                'counterparty_id' => $client['id'], 'client_id' => $client['id'], 'counterparty_snapshot' => $client,
+                'company_id' => $actor->company_id, 'status' => DocumentStatus::Draft, 'counterparty_type' => $vendorPo ? 'vendor' : 'client',
+                'counterparty_id' => $client['id'], 'client_id' => $vendorPo ? null : $client['id'], 'counterparty_snapshot' => $client,
                 'project_id' => $data['project_id'] ?? null, 'title' => $data['title'] ?? null,
                 'terms' => ($data['terms'] ?? null) ?: ($settings['default_terms'] ?? null), 'internal_notes' => $data['internal_notes'] ?? null,
                 'valid_until' => $type === DocumentType::Quotation ? ($data['valid_until'] ?? today()->addDays(30)->toDateString()) : null,
@@ -79,13 +82,16 @@ final class CommercialDocumentService
                 'related_document_id' => $data['related_document_id'] ?? null, 'created_by' => $actor->id,
             ])->save();
             $this->syncLines($doc, $data['lines']);
+            if ($type === DocumentType::Quotation && ! empty($data['lead_id'])) {
+                $this->projects->attachQuotationToLead((int) $data['lead_id'], $doc->id, $actor);
+            }
             Audit::log('create', $doc, null, null, ['type' => $type->value, 'total' => (string) $doc->total->getAmount()], null, $actor);
 
             return $doc->refresh();
         });
     }
 
-    /** @param  array{client_id?: int|null, project_id?: int|null, title?: string|null, terms?: string|null, internal_notes?: string|null, valid_until?: string|null, due_date?: string|null, lines: list<array<string, mixed>>}  $data */
+    /** @param  array{client_id?: int|null, project_id?: int|null, title?: string|null, terms?: string|null, internal_notes?: string|null, valid_until?: string|null, due_date?: string|null, lines: list<array<string, mixed>>, vendor_id?: int|null}  $data */
     public function updateDraft(CommercialDocument $doc, array $data, User $actor): CommercialDocument
     {
         return DB::transaction(function () use ($doc, $data, $actor): CommercialDocument {
@@ -94,9 +100,13 @@ final class CommercialDocumentService
                 throw new CommercialRejected('Only drafts can be edited. Return the document to draft first.');
             }
             $before = ['total' => (string) $doc->total->getAmount()];
-            $client = $doc->type === DocumentType::CreditNote ? $doc->counterparty_snapshot : $this->clientSnapshot($data['client_id'] ?? $doc->client_id);
+            $client = match ($doc->type) {
+                DocumentType::CreditNote => $doc->counterparty_snapshot,
+                DocumentType::VendorPo => $this->vendorSnapshot($data['vendor_id'] ?? $doc->counterparty_id),
+                default => $this->clientSnapshot($data['client_id'] ?? $doc->client_id),
+            };
             $doc->forceFill([
-                'client_id' => $client['id'] ?? $doc->client_id, 'counterparty_id' => $client['id'] ?? $doc->counterparty_id, 'counterparty_snapshot' => $client,
+                'client_id' => $doc->type === DocumentType::VendorPo ? null : ($client['id'] ?? $doc->client_id), 'counterparty_id' => $client['id'] ?? $doc->counterparty_id, 'counterparty_snapshot' => $client,
                 'project_id' => array_key_exists('project_id', $data) ? $data['project_id'] : $doc->project_id,
                 'title' => $data['title'] ?? $doc->title, 'terms' => $data['terms'] ?? $doc->terms, 'internal_notes' => $data['internal_notes'] ?? $doc->internal_notes,
                 'valid_until' => $doc->type === DocumentType::Quotation ? ($data['valid_until'] ?? $doc->valid_until?->toDateString()) : null,
@@ -129,8 +139,11 @@ final class CommercialDocumentService
             if ($doc->lines()->count() === 0 || ! $doc->total->isPositive()) {
                 throw new CommercialRejected('Add at least one line with a value before submitting.');
             }
-            if ($doc->type !== DocumentType::Quotation && $doc->client_id === null) {
+            if (! in_array($doc->type, [DocumentType::Quotation, DocumentType::VendorPo], true) && $doc->client_id === null) {
                 throw new CommercialRejected('Choose the client this document is billed to.');
+            }
+            if ($doc->type === DocumentType::VendorPo && $doc->counterparty_id === null) {
+                throw new CommercialRejected('Choose the vendor.');
             }
             if ($doc instanceof CreditNote) {
                 $this->assertCreditable($doc);
@@ -198,7 +211,11 @@ final class CommercialDocumentService
             DocumentStatus::transitions()->assert($doc->type->label(), $doc->status, DocumentStatus::Issued);
             $date = $issueDate !== null ? Carbon::parse($issueDate) : today();
             $doc->load('lines');
-            $client = $doc->type === DocumentType::CreditNote ? $doc->counterparty_snapshot : $this->clientSnapshot($doc->client_id);
+            $client = match ($doc->type) {
+                DocumentType::CreditNote => $doc->counterparty_snapshot,
+                DocumentType::VendorPo => $this->vendorSnapshot($doc->counterparty_id),
+                default => $this->clientSnapshot($doc->client_id),
+            };
             $version = $this->templates->currentVersion($doc->type);
             $number = $doc->document_no ?? $this->numbering->allocate((int) $doc->company_id, $doc->type->sequence(), (int) $date->format('Y'))['formatted'];
             $extra = $this->references($doc);
@@ -456,6 +473,16 @@ final class CommercialDocumentService
         }
 
         return $this->clients->snapshot($clientId) ?? throw new CommercialRejected('Unknown client.');
+    }
+
+    /** @return array<string, mixed> */
+    private function vendorSnapshot(?int $vendorId): array
+    {
+        if ($vendorId === null) {
+            throw new CommercialRejected('Choose a vendor.');
+        }
+
+        return $this->vendors->snapshot($vendorId) ?? throw new CommercialRejected('Unknown vendor.');
     }
 
     /** @param  list<array<string, mixed>>  $lines */

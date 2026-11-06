@@ -65,6 +65,11 @@ use Illuminate\Support\Carbon;
  * @property int|null $reversal_journal_id
  * @property string|null $void_reason
  * @property Carbon|null $voided_at
+ * @property string|null $external_ref
+ * @property string|null $subject
+ * @property string|null $body
+ * @property string|null $verification_token
+ * @property Carbon|null $effective_date
  * @property int $created_by
  * @property int|null $approved_by
  * @property Carbon|null $issued_at
@@ -104,7 +109,7 @@ abstract class CommercialDocument extends Model implements PermissionResource
             'subtotal' => MoneyCast::class, 'discount_total' => MoneyCast::class, 'tax_total' => MoneyCast::class, 'total' => MoneyCast::class,
             'amount_received' => MoneyCast::class, 'amount_credited' => MoneyCast::class,
             'valid_until' => 'date', 'issue_date' => 'date', 'due_date' => 'date', 'issued_at' => 'datetime', 'approved_at' => 'datetime',
-            'voided_at' => 'datetime', 'client_response_at' => 'datetime', 'revision_no' => 'integer', 'current_level' => 'integer',
+            'voided_at' => 'datetime', 'client_response_at' => 'datetime', 'effective_date' => 'date', 'revision_no' => 'integer', 'current_level' => 'integer',
         ];
     }
 

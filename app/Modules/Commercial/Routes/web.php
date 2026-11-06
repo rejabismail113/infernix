@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Commercial\Http\Controllers\CertificateVerifyController;
 use App\Modules\Commercial\Http\Controllers\CommercialReportController;
 use App\Modules\Commercial\Http\Controllers\DocumentController;
 use App\Modules\Commercial\Http\Controllers\ReceiptController;
@@ -53,3 +54,6 @@ Route::middleware(['web', 'app'])->prefix('commercial')->name('commercial.')->gr
 
     Route::get('reports/{report}', CommercialReportController::class)->whereIn('report', array_keys(CommercialReportController::REPORTS))->name('reports.show');
 });
+
+// PUBLIC: certificate verification behind the QR code — validity only, no personal data (M03-06).
+Route::get('verify/certificate/{token}', CertificateVerifyController::class)->middleware('throttle:30,1')->name('verify.certificate');

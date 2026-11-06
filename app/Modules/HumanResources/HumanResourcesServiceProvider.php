@@ -4,10 +4,34 @@ declare(strict_types=1);
 
 namespace App\Modules\HumanResources;
 
+use App\Kernel\Approval\ApprovalService;
+use App\Kernel\Documents\DocumentLinkRegistry;
+use App\Kernel\Documents\LinkableEntityType;
+use App\Kernel\Identity\Enums\PermissionAction;
+use App\Kernel\Identity\Models\User;
+use App\Kernel\Identity\Services\PermissionService;
+use App\Kernel\Notifications\PendingApprovalRegistry;
+use App\Kernel\People\Contracts\StaffDirectory;
+use App\Modules\Commercial\Events\DocumentIssued;
+use App\Modules\HumanResources\Listeners\DeliverMemoToInbox;
+use App\Modules\HumanResources\Models\Engagement;
+use App\Modules\HumanResources\Models\PaymentBatch;
+use App\Modules\HumanResources\Models\PaymentBatchLine;
+use App\Modules\HumanResources\Models\StaffBankDetail;
+use App\Modules\HumanResources\Models\StaffProfile;
+use App\Modules\HumanResources\Models\Timesheet;
+use App\Modules\HumanResources\Policies\EngagementPolicy;
+use App\Modules\HumanResources\Policies\PaymentBatchPolicy;
+use App\Modules\HumanResources\Policies\StaffBankDetailPolicy;
+use App\Modules\HumanResources\Policies\StaffProfilePolicy;
+use App\Modules\HumanResources\Policies\TimesheetPolicy;
+use App\Modules\HumanResources\Services\StaffDirectoryService;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
 /**
- * Module M04 — HumanResources.
+ * Module M04 — HR & Part-time Staff.
  *
  * @see SRS §4 M04
  * @see docs/ARCHITECTURE.md
@@ -18,12 +42,40 @@ final class HumanResourcesServiceProvider extends ServiceProvider
 
     public function register(): void
     {
-        //
+        $this->app->bind(StaffDirectory::class, StaffDirectoryService::class);
     }
 
     public function boot(): void
     {
         $this->loadMigrationsFrom(__DIR__.'/Database/Migrations');
         $this->loadRoutesFrom(__DIR__.'/Routes/web.php');
+
+        foreach ([StaffProfile::class => StaffProfilePolicy::class, StaffBankDetail::class => StaffBankDetailPolicy::class, Engagement::class => EngagementPolicy::class,
+            Timesheet::class => TimesheetPolicy::class, PaymentBatch::class => PaymentBatchPolicy::class] as $model => $policy) {
+            Gate::policy($model, $policy);
+        }
+        $can = fn (User $u, PermissionAction $a, string $r): bool => app(PermissionService::class)->can($u, $a, $r);
+        Gate::define('reveal-staff-identifier', fn (User $u): bool => $can($u, PermissionAction::Reveal, 'staff_identifiers'));
+        Gate::define('reveal-staff-bank', fn (User $u): bool => $can($u, PermissionAction::Reveal, 'staff_bank'));
+        Gate::define('edit-staff-bank', fn (User $u): bool => $can($u, PermissionAction::Edit, 'staff_bank'));
+
+        Event::listen(DocumentIssued::class, DeliverMemoToInbox::class);
+
+        $registry = $this->app->make(DocumentLinkRegistry::class);
+        $registry->register(new LinkableEntityType('staff_profile', StaffProfile::class, 'Staff profile', ['contract', 'nda', 'agreement', 'certificate', 'memo', 'appointment', 'evidence', 'attachment', 'other'],
+            ownedIds: fn (User $u): array => StaffProfile::query()->where('user_id', $u->id)->pluck('id')->all(),
+            labelFor: fn (StaffProfile $s): string => "{$s->staff_no} {$s->displayName()}"));
+        $registry->register(new LinkableEntityType('payment_batch', PaymentBatch::class, 'Payment batch', ['issued_document', 'evidence', 'attachment'], labelFor: fn (PaymentBatch $b): string => $b->batch_no));
+        $registry->register(new LinkableEntityType('payment_batch_line', PaymentBatchLine::class, 'Payment batch line', ['invoice', 'evidence'], labelFor: fn (PaymentBatchLine $l): string => "batch line #{$l->id}"));
+
+        $this->app->make(PendingApprovalRegistry::class)->register('hr', function (): array {
+            $items = [];
+            foreach (PaymentBatch::query()->where('status', 'pending_approval')->limit(200)->get() as $b) {
+                $items[] = ['key' => "payment_batch:{$b->id}:L{$b->current_level}", 'title' => "Payment batch {$b->batch_no} (RM {$b->total_amount->getAmount()})", 'url' => route('hr.batches.show', $b->id),
+                    'roles' => app(ApprovalService::class)->rolesFor('payment_batch', $b->total_amount, $b->current_level), 'preparer_id' => $b->created_by];
+            }
+
+            return $items;
+        });
     }
 }

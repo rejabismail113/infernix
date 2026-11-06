@@ -5,11 +5,17 @@ declare(strict_types=1);
 namespace App\Modules\Commercial\Services;
 
 use App\Modules\Commercial\Enums\DocumentType;
+use App\Modules\Commercial\Models\AppointmentLetter;
+use App\Modules\Commercial\Models\Certificate;
+use App\Modules\Commercial\Models\ClientPurchaseOrder;
 use App\Modules\Commercial\Models\CommercialDocument;
 use App\Modules\Commercial\Models\CreditNote;
 use App\Modules\Commercial\Models\Invoice;
+use App\Modules\Commercial\Models\Letter;
+use App\Modules\Commercial\Models\Memo;
 use App\Modules\Commercial\Models\Quotation;
 use App\Modules\Commercial\Models\ReceiptDocument;
+use App\Modules\Commercial\Models\VendorPurchaseOrder;
 use App\Modules\Commercial\Models\VoucherDocument;
 use Illuminate\Support\Facades\DB;
 
@@ -25,6 +31,12 @@ final class DocumentRegistry
             DocumentType::CreditNote => CreditNote::class,
             DocumentType::Receipt => ReceiptDocument::class,
             DocumentType::PaymentVoucher => VoucherDocument::class,
+            DocumentType::ClientPo => ClientPurchaseOrder::class,
+            DocumentType::VendorPo => VendorPurchaseOrder::class,
+            DocumentType::Memo => Memo::class,
+            DocumentType::Letter => Letter::class,
+            DocumentType::AppointmentLetter => AppointmentLetter::class,
+            DocumentType::Certificate => Certificate::class,
         };
     }
 

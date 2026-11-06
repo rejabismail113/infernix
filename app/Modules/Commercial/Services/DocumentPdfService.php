@@ -63,7 +63,7 @@ final class DocumentPdfService
 
     private function store(CommercialDocument $doc, User $actor, bool $void, LinkTarget $link): int
     {
-        $bytes = $this->pdf->render($this->templates->html($doc, $void));
+        $bytes = $this->pdf->render($this->templates->html($doc, $void), $doc->type === DocumentType::Certificate);
         $name = str_replace(['/', ' '], '-', $doc->displayNo()).($void ? '-VOID' : '').'.pdf';
         $path = tempnam(sys_get_temp_dir(), 'cd');
         file_put_contents($path, $bytes);
@@ -83,7 +83,9 @@ final class DocumentPdfService
     {
         return match ($doc->type) {
             DocumentType::Receipt => new LinkTarget('receipt', (int) $doc->source_id, 'issued_document'),
-            DocumentType::PaymentVoucher => new LinkTarget('payment', (int) $doc->source_id, 'issued_document'),
+            DocumentType::PaymentVoucher => $doc->source_type === 'payment_batch'
+                ? new LinkTarget('payment_batch', (int) $doc->source_id, 'issued_document')
+                : new LinkTarget('payment', (int) $doc->source_id, 'issued_document'),
             default => new LinkTarget($doc->type->value, $doc->id, 'issued_document'),
         };
     }

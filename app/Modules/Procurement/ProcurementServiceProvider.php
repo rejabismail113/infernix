@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Procurement;
 
+use App\Kernel\Crm\Contracts\VendorDirectory;
 use App\Modules\Procurement\Models\Vendor;
 use App\Modules\Procurement\Policies\VendorPolicy;
+use App\Modules\Procurement\Services\VendorsDirectory;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -21,7 +23,7 @@ final class ProcurementServiceProvider extends ServiceProvider
 
     public function register(): void
     {
-        //
+        $this->app->bind(VendorDirectory::class, VendorsDirectory::class);
     }
 
     public function boot(): void

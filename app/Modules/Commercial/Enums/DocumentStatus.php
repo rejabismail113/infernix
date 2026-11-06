@@ -34,6 +34,12 @@ enum DocumentStatus: string
         ]);
     }
 
+    /** Generated text documents (memo, letter, appointment, certificate) are issued directly — no approval step. */
+    public static function generatedTransitions(): TransitionTable
+    {
+        return new TransitionTable(['draft' => ['issued'], 'issued' => ['void']]);
+    }
+
     public function isIssued(): bool
     {
         return in_array($this, [self::Issued, self::Accepted, self::Rejected, self::Void, self::Superseded], true);

@@ -11,6 +11,10 @@ use App\Modules\Commercial\Exceptions\CommercialRejected;
 use App\Modules\Commercial\Models\CommercialDocument;
 use App\Modules\Commercial\Models\DocumentTemplate;
 use App\Modules\Commercial\Models\DocumentTemplateVersion;
+use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\RendererStyle\RendererStyle;
+use BaconQrCode\Writer;
 use Brick\Money\Money as BrickMoney;
 
 /**
@@ -73,6 +77,7 @@ final class TemplateRenderer
             default => [$signatory],
         };
         $logoPath = public_path((string) ($issuer['logo']['source'] ?? 'images/infernix-logo.svg'));
+        $verifyUrl = $doc->verification_token !== null ? route('verify.certificate', $doc->verification_token) : null;
 
         return [
             'settings' => $settings,
@@ -88,6 +93,9 @@ final class TemplateRenderer
                 'terms' => $doc->terms, 'references' => $references, 'facts' => $facts, 'void_reason' => $doc->void_reason,
                 'counterparty_label' => match ($type) {
                     DocumentType::Quotation => 'Prepared for',
+                    DocumentType::VendorPo => 'Supplier',
+                    DocumentType::Memo, DocumentType::AppointmentLetter, DocumentType::Letter => 'To',
+                    DocumentType::Certificate => 'Awarded to',
                     DocumentType::Receipt => 'Received from',
                     DocumentType::PaymentVoucher => 'Pay to',
                     default => 'Bill to',
@@ -98,7 +106,22 @@ final class TemplateRenderer
                 'subtotal' => $this->s($doc->subtotal), 'tax' => $this->s($doc->tax_total), 'total' => $this->s($doc->total),
             ],
             'signatures' => $signatures,
+            'subject' => $doc->subject,
+            'body' => $doc->body,
+            'effective_date' => $doc->effective_date?->format('j F Y'),
+            'external_ref' => $doc->external_ref,
+            'trainer' => $extra['trainer'] ?? null,
+            'verify_url' => $verifyUrl,
+            'qr' => $verifyUrl !== null ? $this->qr($verifyUrl) : null,
         ];
+    }
+
+    /** SVG QR code as a data URI (certificate verification link). */
+    private function qr(string $text): string
+    {
+        $svg = (new Writer(new ImageRenderer(new RendererStyle(140, 1), new SvgImageBackEnd)))->writeString($text);
+
+        return 'data:image/svg+xml;base64,'.base64_encode($svg);
     }
 
     private function s(BrickMoney $m): string

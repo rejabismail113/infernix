@@ -14,6 +14,7 @@ use App\Modules\Finance\Posting\JournalDraft;
 use App\Modules\Finance\Posting\JournalLineDraft;
 use Brick\Money\Money as BrickMoney;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * The typed posting API M01 offers other modules (CLAUDE.md: "other modules … call typed posting recipes").
@@ -66,6 +67,62 @@ final class LedgerGateway
         }
 
         return $this->posting->post(new JournalDraft($date, 'receipt', $receiptId, "Receipt {$receiptNo} from {$payer}", $lines), $actor)->id;
+    }
+
+    /**
+     * Approved part-time / contractor payment batch (accrual): Dr Part-time & contractor fees per project
+     * (project-tagged so it counts in project margin, M02-05) / Cr Accrued staff payments.
+     *
+     * @param  list<array{project_id: int|null, amount: string, description: string}>  $lines
+     */
+    public function postPayrollAccrual(int $batchId, string $batchNo, Carbon $date, array $lines, User $actor): int
+    {
+        $journal = [];
+        $total = Money::zero();
+        foreach ($lines as $l) {
+            $amount = Money::myr($l['amount']);
+            if (! $amount->isPositive()) {
+                continue;
+            }
+            $journal[] = JournalLineDraft::debit($this->accounts->system('staff_costs_contract')->id, $amount, $l['description'], $l['project_id']);
+            $total = $total->plus($amount);
+        }
+        if (! $total->isPositive()) {
+            throw new PostingRejected('A payment batch with a zero total cannot be posted.');
+        }
+        $journal[] = JournalLineDraft::credit($this->accounts->system('accrued_staff_payments')->id, $total, "Batch {$batchNo}");
+
+        return $this->posting->post(new JournalDraft($date, 'payment_batch', $batchId, "Payment batch {$batchNo} (approved)", $journal), $actor)->id;
+    }
+
+    /** Batch paid out: Dr Accrued staff payments / Cr Bank. */
+    public function postPayrollPayout(int $batchId, string $batchNo, Carbon $date, int $bankAccountId, string $amount, User $actor): int
+    {
+        $total = Money::myr($amount);
+
+        return $this->posting->post(new JournalDraft($date, 'payment_batch', $batchId, "Payment batch {$batchNo} paid", [
+            JournalLineDraft::debit($this->accounts->system('accrued_staff_payments')->id, $total, "Batch {$batchNo}"),
+            JournalLineDraft::credit($this->accounts->forBank($bankAccountId)->id, $total, "Batch {$batchNo} payout"),
+        ]), $actor)->id;
+    }
+
+    /**
+     * Posted revenue and direct costs of a project from the ledger (lines tagged with the project), by source.
+     *
+     * @return list<array{journal_id: int, journal_no: string, date: string, source_type: string, source_id: int|null, account: string, type: string, amount: string, description: string|null}>
+     */
+    public function projectLines(int $projectId): array
+    {
+        return DB::table('journal_lines as l')->join('journals as j', 'j.id', '=', 'l.journal_id')->join('chart_accounts as a', 'a.id', '=', 'l.account_id')
+            ->where('l.project_id', $projectId)->where('j.status', '!=', 'draft')->whereIn('a.type', ['income', 'expense'])
+            ->orderBy('j.posting_date')->orderBy('l.id')
+            ->get(['j.id as journal_id', 'j.journal_no', 'j.posting_date', 'j.source_type', 'j.source_id', 'a.code', 'a.name', 'a.type', 'l.debit', 'l.credit', 'l.description'])
+            ->map(function ($r): array {
+                $amount = $r->type === 'income' ? Money::fromDb((string) $r->credit)->minus(Money::fromDb((string) $r->debit)) : Money::fromDb((string) $r->debit)->minus(Money::fromDb((string) $r->credit));
+
+                return ['journal_id' => (int) $r->journal_id, 'journal_no' => (string) $r->journal_no, 'date' => (string) $r->posting_date, 'source_type' => (string) $r->source_type,
+                    'source_id' => $r->source_id === null ? null : (int) $r->source_id, 'account' => "{$r->code} {$r->name}", 'type' => (string) $r->type, 'amount' => (string) $amount->getAmount(), 'description' => $r->description];
+            })->all();
     }
 
     /** Reverse a journal this gateway posted (void invoice / credit note / receipt). Returns the reversal id. */

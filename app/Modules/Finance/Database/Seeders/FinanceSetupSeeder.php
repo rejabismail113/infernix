@@ -37,7 +37,7 @@ final class FinanceSetupSeeder extends Seeder
         }
 
         // Up to RM 5,000: one approver (FIN or OWN). Above: FIN or OWN, then OWN (a different person).
-        foreach (['claim', 'bill', 'payment', 'journal', 'quotation', 'invoice', 'credit_note', 'purchase_request', 'asset_disposal'] as $type) {
+        foreach (['claim', 'bill', 'payment', 'journal', 'quotation', 'invoice', 'credit_note', 'payment_batch', 'vendor_po', 'purchase_request', 'asset_disposal'] as $type) {
             if (ApprovalMatrix::query()->where('entity_type', $type)->exists()) {
                 continue;
             }

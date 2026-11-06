@@ -36,6 +36,7 @@ final class ChartOfAccountsSeeder extends Seeder
         ['2050', 'Refunds clearing', 'liability', 'refunds_clearing', 'refunds_clearing', true, 'pending_review'],
         ['2060', 'Unapplied receipts', 'liability', 'unapplied_receipts', 'unapplied_receipts', true, 'pending_review'],
         ['2070', 'SST payable (output tax)', 'liability', 'tax_payable', 'sst_payable', true, 'pending_review'],
+        ['2080', 'Accrued staff & contractor payments', 'liability', 'accrued_payroll', 'accrued_staff_payments', true, 'pending_review'],
         ['3000', 'Equity', 'equity', null, null, false, 'pending_review'],
         ['3010', 'Owner capital', 'equity', 'owner_capital', 'owner_capital', true, 'non_deductible'],
         ['3020', 'Owner drawings', 'equity', 'owner_drawings', 'owner_drawings', true, 'non_deductible'],
@@ -62,6 +63,7 @@ final class ChartOfAccountsSeeder extends Seeder
         ['5140', 'CSR', 'expense', 'operating', null, true, 'pending_review'],
         ['5150', 'Low-value equipment', 'expense', 'low_value_equipment', 'low_value_equipment', true, 'pending_review'],
         ['5160', 'Consumables', 'expense', 'consumables', 'consumables', true, 'pending_review'],
+        ['5170', 'Part-time & contractor fees', 'expense', 'staff_costs', 'staff_costs_contract', true, 'pending_review'],
         ['5800', 'Depreciation', 'expense', 'depreciation', 'depreciation_expense', true, 'pending_review'],
         ['5900', 'General expenses', 'expense', 'operating', 'general_expense', true, 'pending_review'],
     ];

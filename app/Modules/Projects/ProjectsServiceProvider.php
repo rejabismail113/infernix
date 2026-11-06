@@ -8,11 +8,14 @@ use App\Kernel\Crm\Contracts\ClientDirectory;
 use App\Kernel\Crm\Contracts\ProjectDirectory;
 use App\Kernel\Documents\DocumentLinkRegistry;
 use App\Kernel\Documents\LinkableEntityType;
+use App\Kernel\Identity\Models\User;
 use App\Modules\Commercial\Events\ProjectBillingChanged;
 use App\Modules\Projects\Listeners\UpdateProjectPaymentStatus;
 use App\Modules\Projects\Models\Client;
+use App\Modules\Projects\Models\Lead;
 use App\Modules\Projects\Models\Project;
 use App\Modules\Projects\Policies\ClientPolicy;
+use App\Modules\Projects\Policies\LeadPolicy;
 use App\Modules\Projects\Policies\ProjectPolicy;
 use App\Modules\Projects\Services\ClientsDirectory;
 use App\Modules\Projects\Services\ProjectsDirectory;
@@ -42,10 +45,16 @@ final class ProjectsServiceProvider extends ServiceProvider
         $this->loadRoutesFrom(__DIR__.'/Routes/web.php');
         Gate::policy(Client::class, ClientPolicy::class);
         Gate::policy(Project::class, ProjectPolicy::class);
+        Gate::policy(Lead::class, LeadPolicy::class);
         Event::listen(ProjectBillingChanged::class, UpdateProjectPaymentStatus::class);
 
         $registry = $this->app->make(DocumentLinkRegistry::class);
         $registry->register(new LinkableEntityType('client', Client::class, 'Client', ['client_po', 'contract', 'evidence', 'attachment'], labelFor: fn (Client $c): string => $c->name));
-        $registry->register(new LinkableEntityType('project', Project::class, 'Project', ['contract', 'client_po', 'evidence', 'attachment'], labelFor: fn (Project $p): string => "{$p->code} {$p->name}"));
+        // Project documents follow the project record scope: a PM sees only assigned projects' files (M02-07).
+        $registry->register(new LinkableEntityType('project', Project::class, 'Project', ['contract', 'client_po', 'agreement', 'report', 'evidence', 'attachment', 'other'],
+            accessibleIds: fn (User $u): array|string => app(ProjectDirectory::class)->visibleProjectIds($u),
+            ownedIds: fn (User $u): array => Project::query()->where('created_by', $u->id)->pluck('id')->all(),
+            labelFor: fn (Project $p): string => "{$p->code} {$p->name}"));
+        $registry->register(new LinkableEntityType('lead', Lead::class, 'Lead', ['evidence', 'attachment'], labelFor: fn (Lead $l): string => $l->title));
     }
 }

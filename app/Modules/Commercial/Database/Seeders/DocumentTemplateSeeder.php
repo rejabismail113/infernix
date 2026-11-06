@@ -26,13 +26,18 @@ final class DocumentTemplateSeeder extends Seeder
             'credit_note' => ['Credit note', ['title' => 'CREDIT NOTE', 'show_bank_details' => false, 'default_terms' => 'This credit note reduces the balance of the invoice referenced above.']],
             'receipt' => ['Official receipt', ['title' => 'OFFICIAL RECEIPT', 'show_bank_details' => false, 'default_terms' => 'Thank you for your payment.']],
             'payment_voucher' => ['Payment voucher', ['title' => 'PAYMENT VOUCHER', 'show_bank_details' => false, 'default_terms' => null]],
+            'vendor_po' => ['Vendor purchase order', ['title' => 'PURCHASE ORDER', 'show_bank_details' => false, 'default_terms' => "1. Please quote this PO number on your invoice.\n2. Deliver to the address above unless agreed otherwise. [PLACEHOLDER — legal review]"]],
+            'memo' => ['Staff memo', ['title' => 'MEMO', 'view' => 'commercial.templates.letter-v1']],
+            'letter' => ['Letter', ['title' => 'LETTER', 'view' => 'commercial.templates.letter-v1']],
+            'appointment_letter' => ['Appointment letter', ['title' => 'LETTER OF APPOINTMENT', 'view' => 'commercial.templates.letter-v1']],
+            'certificate' => ['Training certificate', ['title' => 'CERTIFICATE OF COMPLETION', 'view' => 'commercial.templates.certificate-v1']],
         ];
         foreach ($templates as $code => [$name, $settings]) {
             $template = DocumentTemplate::query()->firstOrCreate(['code' => $code], ['name' => $name, 'description' => 'Infernix standard layout', 'active' => true]);
             if (! DocumentTemplateVersion::query()->where('document_template_id', $template->id)->exists()) {
                 DocumentTemplateVersion::query()->create([
-                    'document_template_id' => $template->id, 'version' => 1, 'view_name' => 'commercial.templates.standard-v1',
-                    'settings' => array_merge($common, $settings), 'notes' => 'PLACEHOLDER wording — owner/legal review (D-19)', 'effective_from' => '2026-01-01',
+                    'document_template_id' => $template->id, 'version' => 1, 'view_name' => $settings['view'] ?? 'commercial.templates.standard-v1',
+                    'settings' => array_merge($common, array_diff_key($settings, ['view' => true])), 'notes' => 'PLACEHOLDER wording — owner/legal review (D-19)', 'effective_from' => '2026-01-01',
                 ]);
             }
         }

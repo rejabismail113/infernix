@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { reactive } from 'vue';
+import { reactive, ref } from 'vue';
 import Button from '@/Components/Button.vue';
 import StatusChip from '@/Components/StatusChip.vue';
 import DataTable from '@/Components/Table/DataTable.vue';
 import { toPagination, useServerTable, type LaravelPage } from '@/composables/useServerTable';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import { describeChanges, entityLabel, humanize } from '@/lib/auditDiff';
 import type { TableColumn } from '@/types/table';
 
-interface Ev { id: number; occurred_at: string; actor: string | null; actor_role: string | null; action: string; entity_type: string; entity_id: number | null; before: Record<string, unknown> | null; after: Record<string, unknown> | null; redactions: string[] | null; ip: string | null; request_id: string | null; reason: string | null }
-const props = defineProps<{ events: LaravelPage<Ev>; filters: Record<string, string | null>; actions: string[]; can: { export: boolean } }>();
+interface Ev { id: number; occurred_at: string; actor: string | null; actor_role: string | null; action: string; entity_type: string; entity_id: number | null; before: Record<string, unknown> | unknown[] | null; after: Record<string, unknown> | unknown[] | null; redactions: string[] | null; ip: string | null; request_id: string | null; reason: string | null }
+const props = defineProps<{ events: LaravelPage<Ev>; people?: Record<string, string>; filters: Record<string, string | null>; actions: string[]; can: { export: boolean } }>();
 
 const f = reactive({ action: props.filters.action ?? '', entity_type: props.filters.entity_type ?? '', entity_id: props.filters.entity_id ?? '', from: props.filters.from ?? '', to: props.filters.to ?? '' });
 const table = useServerTable(() => route('admin.audit-log.index'), () => props.filters);
@@ -20,10 +21,19 @@ const columns: TableColumn[] = [
     { key: 'actor', label: 'Actor' },
     { key: 'action', label: 'Action', sortable: true },
     { key: 'entity_type', label: 'Entity', sortable: true },
-    { key: 'change', label: 'Before → after' },
+    { key: 'change', label: 'What changed' },
     { key: 'reason', label: 'Reason' },
     { key: 'ip', label: 'IP / request', hidden: true },
 ];
+// Readable change rows (lib/auditDiff); the first few are shown, the rest behind "Show N more". Raw JSON stays in the CSV export.
+const VISIBLE = 4;
+const expanded = ref(new Set<number>());
+const toggle = (id: number) => {
+    const next = new Set(expanded.value);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    expanded.value = next;
+};
+const changesFor = (row: Ev) => describeChanges(row.before, row.after, props.people ?? {});
 const tone = (a: string) => (a.includes('fail') || a.includes('denied') || a.includes('rejected') || a === 'hard_delete' ? 'danger' : a.includes('permission') || a.includes('lock') || a === 'reveal' || a === 'export' ? 'warning' : 'neutral');
 </script>
 
@@ -101,7 +111,7 @@ const tone = (a: string) => (a.includes('fail') || a.includes('denied') || a.inc
             @per-page="table.onPerPage"
         >
             <template #cell-occurred_at="{ row }">
-                <span class="whitespace-nowrap font-mono text-xs">{{ row.occurred_at.replace('T', ' ').slice(0, 19) }}</span>
+                <span class="whitespace-nowrap text-sm tabular-nums text-surface-700">{{ row.occurred_at.replace('T', ' ').slice(0, 19) }}</span>
             </template>
             <template #cell-actor="{ row }">
                 {{ row.actor ?? 'system' }} <span class="block text-xs text-surface-400">{{ row.actor_role }}</span>
@@ -110,35 +120,59 @@ const tone = (a: string) => (a.includes('fail') || a.includes('denied') || a.inc
                 <StatusChip
                     :status="row.action"
                     :tone="tone(row.action)"
-                    :label="row.action"
+                    :label="humanize(row.action)"
                 />
             </template>
             <template #cell-entity_type="{ row }">
-                {{ row.entity_type }}<span v-if="row.entity_id">#{{ row.entity_id }}</span>
+                {{ entityLabel(row.entity_type) }}<span
+                    v-if="row.entity_id"
+                    class="text-surface-500"
+                > #{{ row.entity_id }}</span>
             </template>
             <template #cell-change="{ row }">
-                <div class="max-w-md font-mono text-xs">
-                    <div
-                        v-if="row.before"
-                        class="truncate text-red-700"
-                        :title="JSON.stringify(row.before)"
-                    >
-                        − {{ JSON.stringify(row.before) }}
-                    </div>
-                    <div
-                        v-if="row.after"
-                        class="truncate text-emerald-700"
-                        :title="JSON.stringify(row.after)"
-                    >
-                        + {{ JSON.stringify(row.after) }}
-                    </div>
-                    <div
-                        v-if="row.redactions?.length"
-                        class="text-surface-400"
-                    >
-                        redacted: {{ row.redactions.join(', ') }}
-                    </div>
+                <div
+                    v-for="(c, i) in changesFor(row)"
+                    v-show="i < VISIBLE || expanded.has(row.id)"
+                    :key="c.key"
+                    class="max-w-xl py-0.5 text-sm leading-snug"
+                >
+                    <span class="font-medium text-surface-700">{{ c.label }}:</span>
+                    <template v-if="c.kind === 'changed'">
+                        <span class="ml-1 text-surface-500 line-through decoration-red-400/70">{{ c.from }}</span>
+                        <span
+                            class="mx-1 text-surface-400"
+                            aria-label="changed to"
+                        >→</span>
+                        <span class="font-medium text-emerald-700">{{ c.to }}</span>
+                    </template>
+                    <span
+                        v-else-if="c.kind === 'added'"
+                        class="ml-1 text-surface-900"
+                    >{{ c.to }}</span>
+                    <span
+                        v-else
+                        class="ml-1 text-surface-500"
+                    ><span class="line-through decoration-red-400/70">{{ c.from }}</span> <span class="text-xs">(removed)</span></span>
                 </div>
+                <button
+                    v-if="changesFor(row).length > VISIBLE"
+                    type="button"
+                    class="mt-1 text-xs font-medium text-brand-700 hover:underline"
+                    :aria-expanded="expanded.has(row.id)"
+                    @click="toggle(row.id)"
+                >
+                    {{ expanded.has(row.id) ? 'Show less' : `Show ${changesFor(row).length - VISIBLE} more` }}
+                </button>
+                <span
+                    v-if="changesFor(row).length === 0"
+                    class="text-sm text-surface-400"
+                >—</span>
+                <p
+                    v-if="row.redactions?.length"
+                    class="mt-1 text-xs text-surface-500"
+                >
+                    Hidden for privacy: {{ row.redactions.map(humanize).join(', ') }}
+                </p>
             </template>
             <template #cell-ip="{ row }">
                 <span class="text-xs text-surface-500">{{ row.ip }} · {{ row.request_id?.slice(0, 8) }}</span>

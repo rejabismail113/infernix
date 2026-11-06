@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Administration\Http\Controllers;
 
 use App\Kernel\Audit\Models\AuditEvent;
+use App\Kernel\Identity\Models\User;
 use App\Kernel\Reports\CsvExport;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -23,6 +24,9 @@ final class AuditLogController
 {
     use AuthorizesRequests;
 
+    /** Keys inside before/after JSON that hold a user id (mirrored in resources/js/lib/auditDiff.ts). */
+    public const PERSON_KEY = '/^(user_id|owner_id|actor_id|approver_id|delegate_id|delegator_id|pm_user_id|staff_user_id|uploaded_by|linked_by|shared_by|triggered_by|[a-z_]+_by)$/';
+
     public function index(Request $request): Response
     {
         $this->authorize('viewAny', AuditEvent::class);
@@ -32,6 +36,9 @@ final class AuditLogController
 
         return Inertia::render('Admin/AuditLog/Index', [
             'events' => $events,
+            // Names for user ids referenced inside before/after (approved_by, posted_by …) on THIS page only, so the
+            // log reads "Approved by: Hakim" instead of a number. Viewers of the audit log may already see actors.
+            'people' => $this->peopleOn($events->items()),
             'filters' => $filters,
             'actions' => AuditEvent::query()->select('action')->distinct()->orderBy('action')->pluck('action'),
             'can' => ['export' => $request->user()?->can('export', AuditEvent::class) ?? false],
@@ -93,6 +100,39 @@ final class AuditLogController
         $n = $request->integer('per_page', 25);
 
         return in_array($n, [10, 25, 50, 100], true) ? $n : 25;
+    }
+
+    /**
+     * @param  array<int, mixed>  $rows  presented events
+     * @return array<int, string> user id => name
+     */
+    private function peopleOn(array $rows): array
+    {
+        $ids = [];
+        $walk = function (mixed $data) use (&$ids): void {
+            if (! is_array($data)) {
+                return;
+            }
+            foreach ($data as $key => $value) {
+                if (is_string($key) && preg_match(self::PERSON_KEY, $key) === 1 && (is_int($value) || (is_string($value) && ctype_digit($value)))) {
+                    $ids[(int) $value] = true;
+                }
+            }
+        };
+        foreach ($rows as $row) {
+            if (is_array($row)) {
+                $walk($row['before'] ?? null);
+                $walk($row['after'] ?? null);
+            }
+        }
+        if ($ids === []) {
+            return [];
+        }
+
+        /** @var array<int, string> $names */
+        $names = User::query()->whereIn('id', array_keys($ids))->pluck('name', 'id')->all();
+
+        return $names;
     }
 
     /** @return array<string, mixed> */

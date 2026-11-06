@@ -79,12 +79,12 @@ const describedBy = computed(() => (props.id ? `${props.id}-currency` : undefine
 
 <template>
     <div
-        class="flex items-stretch overflow-hidden rounded-md border bg-white focus-within:ring-2 focus-within:ring-brand-500"
-        :class="invalid ? 'border-red-400' : 'border-surface-300'"
+        class="glass-field flex min-h-[2.6rem] items-stretch overflow-hidden"
+        :class="{ 'glass-invalid': invalid }"
     >
         <span
             :id="describedBy"
-            class="flex items-center bg-surface-50 px-3 text-sm text-surface-500"
+            class="flex items-center border-r border-surface-900/5 bg-surface-100/60 px-3 text-sm text-surface-500"
         >RM</span>
         <input
             :id="id"
@@ -96,7 +96,7 @@ const describedBy = computed(() => (props.id ? `${props.id}-currency` : undefine
             :disabled="disabled"
             :aria-invalid="invalid || undefined"
             :aria-describedby="describedBy"
-            class="w-full border-0 px-3 py-2 text-right font-mono tabular-nums outline-none focus:ring-0"
+            class="field-bare w-full border-0 bg-transparent px-3 py-2 text-right font-mono tabular-nums outline-none focus:ring-0"
             data-test="money-input"
             @input="onInput"
             @blur="onBlur"

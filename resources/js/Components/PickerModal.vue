@@ -104,7 +104,7 @@ function confirm(item: PickerItem | null) {
                 <Icon
                     name="search"
                     :size="16"
-                    class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-surface-400"
+                    class="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-surface-500"
                 />
                 <input
                     v-model="term"

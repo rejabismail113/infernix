@@ -42,7 +42,7 @@ function submit() {
                 >Email address</label>
                 <div class="relative">
                     <svg
-                        class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-surface-500"
+                        class="pointer-events-none absolute left-4 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-surface-500"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
@@ -85,7 +85,7 @@ function submit() {
                 >Password</label>
                 <div class="relative">
                     <svg
-                        class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-surface-500"
+                        class="pointer-events-none absolute left-4 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-surface-500"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"

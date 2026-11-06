@@ -108,12 +108,12 @@ final class PerfBenchmark extends Command
             SELECT {$company}, 'BENCH-BL-' || g, {$vendor}, 'BINV-' || g, DATE '{$date}' - (g % 300), DATE '{$date}', 99, 'draft', {$u}, now(), now() FROM generate_series(1, {$n}) g");
         $period = DB::table('fiscal_periods')->where('starts_on', '<=', $date)->where('ends_on', '>=', $date)->first();
         if ($period !== null && $period->locked_at === null) {
-            $jn = intdiv($n, 5);
-            DB::statement("INSERT INTO journals (company_id, journal_no, journal_date, posting_date, fiscal_period_id, source_type, memo, status, created_by, created_at, updated_at)
-                SELECT {$company}, 'BENCH-JV-' || g, DATE '{$date}', DATE '{$date}', {$period->id}, 'manual', 'bench', 'draft', {$u}, now(), now() FROM generate_series(1, {$jn}) g");
-            DB::statement("INSERT INTO journal_lines (journal_id, line_no, account_id, debit, credit) SELECT id, 1, {$expense}, 10, 0 FROM journals WHERE journal_no LIKE 'BENCH-JV-%'");
-            DB::statement("INSERT INTO journal_lines (journal_id, line_no, account_id, debit, credit) SELECT id, 2, {$bankGl}, 0, 10 FROM journals WHERE journal_no LIKE 'BENCH-JV-%'");
-            DB::statement("UPDATE journals SET status = 'posted', posted_at = now(), posted_by = {$u} WHERE journal_no LIKE 'BENCH-JV-%'");
+            // Synthetic posted-ledger volume lives in database/benchmark (never app code; always rolled back).
+            $sql = strtr((string) file_get_contents(database_path('benchmark/journals.sql')), [
+                ':company' => (string) $company, ':user' => (string) $u, ':period' => (string) (int) $period->id, ':date' => $date,
+                ':count' => (string) intdiv($n, 5), ':expense' => (string) $expense, ':bank_gl' => (string) $bankGl,
+            ]);
+            DB::unprepared($sql);
         }
         DB::statement("INSERT INTO search_index (entity_type, entity_id, title, body, module, indexed_at) SELECT 'vendor', {$vendor} + g, 'bench item ' || g, null, 'Bench', now() FROM generate_series(1, {$n}) g ON CONFLICT DO NOTHING");
     }

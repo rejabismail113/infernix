@@ -30,8 +30,9 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
      */
     protected function gate(): void
     {
-        // Deny-by-default: only the seeded Owner until roles exist (Prompt 1a switches this to OWN/FIN).
-        Gate::define('viewHorizon', static fn (?User $user = null): bool => $user !== null
-            && $user->email === config('infernix.seed_owner.email'));
+        // Deny-by-default (NFR-02): active Owner-role users only, in EVERY environment (Horizon's default lets
+        // anyone in when APP_ENV=local). Routes also run the `app` middleware (auth + active + MFA).
+        Gate::define('viewHorizon', static fn (?User $user = null): bool => $user !== null && $user->isActive() && $user->isOwner());
+        Horizon::auth(static fn ($request): bool => Gate::check('viewHorizon', [$request->user()]));
     }
 }

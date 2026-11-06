@@ -68,6 +68,8 @@ it('WF-05: payment uses the locked rate version; a new rate never changes an alr
     app(StaffService::class)->addEngagement($staff, ['rate_type' => 'hourly', 'rate_amount' => '80.00', 'effective_from' => '2026-03-15'], ownerUser());
     $batch = app(PaymentBatchService::class)->create([$t->id], '2026-03-31', 'voucher', $fin);
     expect((string) $t->fresh()->calculated_amount->getAmount())->toBe('500.00')->and((string) $batch->total_amount->getAmount())->toBe('500.00');
+    // The batch page renders (regression: strict-mode lines_count crash found by the route matrix).
+    actingAsSatisfied($fin)->get(route('hr.batches.show', $batch->id))->assertOk();
     expect(fn () => DB::transaction(fn () => DB::table('timesheets')->where('id', $t->id)->update(['calculated_amount' => '800'])))->toThrow(QueryException::class, 'locked rate');
 })->group('WF-05', 'M04-03');
 

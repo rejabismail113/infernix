@@ -15,7 +15,8 @@ final class SecretRedactor
 {
     public const PLACEHOLDER = '[SECRET-REDACTED]';
 
-    private const KEY_PATTERN = '/\b(password|passwd|pwd|secret|api[_-]?key|token|authorization|bearer)\b(\s*[:=]\s*)(["\']?)([^\s"\'&,;]+)/i';
+    // The value stops at a backslash too, so scrubbing already-encoded JSON (`\"`) keeps it valid JSON.
+    private const KEY_PATTERN = '/\b(password|passwd|pwd|secret|api[_-]?key|token|authorization|bearer)\b(\s*[:=]\s*)(["\']?)([^\s"\'&,;\\\\]+)/i';
 
     public function scrub(string $text): string
     {

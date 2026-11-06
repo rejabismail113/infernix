@@ -54,6 +54,19 @@ final class PermissionService
         };
     }
 
+    /**
+     * Type-level gate for "act on ANY record of this resource" (reveal anyone's bank details, edit anyone's
+     * bank details, run company-wide reports). Unlike can() with a bare resource name — which is true for any
+     * scope and only answers "may this user open the page at all" — this requires an `all` grant, so an
+     * `own`-scoped grant can never satisfy it. Found by the route × role matrix (STF edit:own staff_bank).
+     *
+     * @see SRS NFR-02, M04-02
+     */
+    public function canOnAll(User $user, PermissionAction $action, string $resource): bool
+    {
+        return $this->userMayAct($user) && $this->scopeFor($user, $resource, $action) === RecordScope::All;
+    }
+
     /** Widest effective scope the user holds for resource/action across roles. */
     public function scopeFor(User $user, string $resource, PermissionAction $action): RecordScope
     {

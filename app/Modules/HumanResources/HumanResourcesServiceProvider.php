@@ -58,7 +58,7 @@ final class HumanResourcesServiceProvider extends ServiceProvider
             Timesheet::class => TimesheetPolicy::class, PaymentBatch::class => PaymentBatchPolicy::class] as $model => $policy) {
             Gate::policy($model, $policy);
         }
-        $can = fn (User $u, PermissionAction $a, string $r): bool => app(PermissionService::class)->can($u, $a, $r);
+        $can = fn (User $u, PermissionAction $a, string $r): bool => app(PermissionService::class)->canOnAll($u, $a, $r);
         Gate::define('reveal-staff-identifier', fn (User $u): bool => $can($u, PermissionAction::Reveal, 'staff_identifiers'));
         Gate::define('reveal-staff-bank', fn (User $u): bool => $can($u, PermissionAction::Reveal, 'staff_bank'));
         Gate::define('edit-staff-bank', fn (User $u): bool => $can($u, PermissionAction::Edit, 'staff_bank'));

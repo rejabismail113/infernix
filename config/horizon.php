@@ -85,7 +85,7 @@ return [
     |
     */
 
-    'middleware' => ['web'],
+    'middleware' => ['web', 'app'], // auth + active + MFA before the viewHorizon gate (NFR-02)
 
     /*
     |--------------------------------------------------------------------------

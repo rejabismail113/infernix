@@ -18,3 +18,9 @@ it('scrubs key=value secrets and the sentinel from free text', function (): void
         ->and($s->scrub('see '.config('infernix.secret_sentinel')))->toBe('see [SECRET-REDACTED]')
         ->and($s->scrub('nothing secret here'))->toBe('nothing secret here');
 })->group('M13-05', 'UAT-08');
+
+it('keeps already-encoded JSON valid when scrubbing a secret inside it', function (): void {
+    $encoded = json_encode(['address' => json_encode(['line1' => 'portal password=hunter2', 'city' => 'KL'])]);
+    $clean = (new SecretRedactor)->scrub((string) $encoded);
+    expect(json_decode($clean, true, flags: JSON_THROW_ON_ERROR)['address'])->toBe('{"line1":"portal password=[SECRET-REDACTED]","city":"KL"}');
+})->group('M13-05', 'UAT-08');

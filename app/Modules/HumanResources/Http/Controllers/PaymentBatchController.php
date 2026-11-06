@@ -138,7 +138,7 @@ final class PaymentBatchController
     public static function row(PaymentBatch $b): array
     {
         return ['id' => $b->id, 'batch_no' => $b->batch_no, 'period_end' => $b->period_end->toDateString(), 'status' => $b->status, 'payout_method' => $b->payout_method,
-            'total_amount' => (string) $b->total_amount->getAmount(), 'lines' => (int) ($b->getAttribute('lines_count') ?? $b->lines()->count()), 'voucher_no' => $b->voucher_no];
+            'total_amount' => (string) $b->total_amount->getAmount(), 'lines' => $b->relationLoaded('lines') ? $b->lines->count() : (int) ($b->getAttributes()['lines_count'] ?? $b->lines()->count()), 'voucher_no' => $b->voucher_no];
     }
 
     private function user(Request $request): User

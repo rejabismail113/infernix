@@ -74,9 +74,9 @@ final class FinanceServiceProvider extends ServiceProvider
         // M05-04: an approved disposal posts its journal synchronously, inside the disposal's transaction.
         Event::listen(AssetDisposed::class, PostAssetDisposal::class);
         Event::listen(AssetDepreciationDue::class, PostAssetDepreciation::class);
-        Gate::define('set-tax-treatment', fn (User $u): bool => app(PermissionService::class)->can($u, PermissionAction::Edit, 'tax_review'));
-        Gate::define('view-finance-reports', fn (User $u): bool => app(PermissionService::class)->can($u, PermissionAction::View, 'finance_reports'));
-        Gate::define('export-finance-reports', fn (User $u): bool => app(PermissionService::class)->can($u, PermissionAction::Export, 'finance_reports'));
+        Gate::define('set-tax-treatment', fn (User $u): bool => app(PermissionService::class)->canOnAll($u, PermissionAction::Edit, 'tax_review'));
+        Gate::define('view-finance-reports', fn (User $u): bool => app(PermissionService::class)->canOnAll($u, PermissionAction::View, 'finance_reports'));
+        Gate::define('export-finance-reports', fn (User $u): bool => app(PermissionService::class)->canOnAll($u, PermissionAction::Export, 'finance_reports'));
 
         // Export Centre (M11): every finance report, gated by finance_reports:export.
         $catalog = $this->app->make(ReportCatalog::class);

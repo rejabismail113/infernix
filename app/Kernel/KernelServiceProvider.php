@@ -24,6 +24,8 @@ use App\Kernel\Numbering\Models\NumberingSequence;
 use App\Kernel\Numbering\NumberingSequencePolicy;
 use App\Kernel\Reports\ReportCatalog;
 use App\Kernel\Search\SearchRegistry;
+use App\Kernel\Secrets\ScrubSecretsOnSave;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -47,6 +49,8 @@ final class KernelServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->loadRoutesFrom(__DIR__.'/Identity/Routes/web.php');
+        // Rule 7: nothing secret-looking is ever persisted through Eloquent (see ScrubSecretsOnSave).
+        Event::listen('eloquent.saving: *', [ScrubSecretsOnSave::class, 'handle']);
 
         Gate::policy(User::class, UserPolicy::class);
         Gate::policy(UserInvitation::class, UserInvitationPolicy::class);
@@ -76,7 +80,7 @@ final class KernelServiceProvider extends ServiceProvider
         ));
 
         // Named abilities for report pages (resource "reports_access" in the matrix).
-        Gate::define('view-access-reports', fn (User $u): bool => app(PermissionService::class)->can($u, PermissionAction::View, 'reports_access'));
-        Gate::define('export-access-reports', fn (User $u): bool => app(PermissionService::class)->can($u, PermissionAction::Export, 'reports_access'));
+        Gate::define('view-access-reports', fn (User $u): bool => app(PermissionService::class)->canOnAll($u, PermissionAction::View, 'reports_access'));
+        Gate::define('export-access-reports', fn (User $u): bool => app(PermissionService::class)->canOnAll($u, PermissionAction::Export, 'reports_access'));
     }
 }

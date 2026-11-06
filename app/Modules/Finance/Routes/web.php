@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Kernel\Identity\Http\Middleware\RequireRecentAuth;
 use App\Modules\Finance\Http\Controllers\AccountController;
 use App\Modules\Finance\Http\Controllers\BankController;
+use App\Modules\Finance\Http\Controllers\BankSettingsController;
 use App\Modules\Finance\Http\Controllers\BillController;
 use App\Modules\Finance\Http\Controllers\ClaimController;
 use App\Modules\Finance\Http\Controllers\FinanceRecordController;
@@ -79,7 +80,15 @@ Route::middleware(['web', 'app'])->prefix('finance')->name('finance.')->group(fu
     Route::post('payments/{payment}/cancel', [PaymentController::class, 'cancel'])->name('payments.cancel');
 
     Route::get('bank', [BankController::class, 'index'])->name('bank.index');
-    Route::get('bank/{bank}', [BankController::class, 'show'])->name('bank.show');
+    Route::get('bank/settings', [BankSettingsController::class, 'index'])->name('bank.settings');
+    Route::post('bank/profiles', [BankSettingsController::class, 'saveProfile'])->name('bank.profiles.store');
+    Route::put('bank/profiles/{profile}', [BankSettingsController::class, 'saveProfile'])->name('bank.profiles.update');
+    Route::post('bank/rules', [BankSettingsController::class, 'saveRule'])->name('bank.rules.store');
+    Route::put('bank/rules/{rule}', [BankSettingsController::class, 'saveRule'])->name('bank.rules.update');
+    Route::get('bank/{bank}', [BankController::class, 'show'])->whereNumber('bank')->name('bank.show');
+    Route::post('bank/{bank}/auto-match', [BankController::class, 'autoMatch'])->middleware('throttle:20,1')->name('bank.auto-match');
+    Route::post('bank/{bank}/match-group', [BankController::class, 'matchGroup'])->name('bank.match-group');
+    Route::get('bank/{bank}/ledger-lines', [BankController::class, 'ledgerLines'])->name('bank.ledger-lines');
     Route::post('bank/{bank}/import', [BankController::class, 'import'])->middleware('throttle:20,1')->name('bank.import');
     Route::post('bank/{bank}/transactions', [BankController::class, 'storeTransaction'])->name('bank.transactions.store');
     Route::get('bank/{bank}/reconciliation', [BankController::class, 'reconciliation'])->name('bank.reconciliation');

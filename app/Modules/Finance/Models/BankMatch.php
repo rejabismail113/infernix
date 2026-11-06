@@ -11,7 +11,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * One bank line ↔ one ledger line on the bank's GL account. Unique on both sides (no double matching).
+ * One allocation between a bank line and a ledger line on the bank's GL account. Several rows sharing a
+ * match_group form a split match; a trigger caps each side at its own amount (no double matching).
  *
  * @see SRS M01-07
  *
@@ -21,6 +22,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property Money $amount
  * @property string $match_type
  * @property int $matched_by
+ * @property string|null $match_group
+ * @property int|null $rule_id
  */
 final class BankMatch extends Model
 {
@@ -29,7 +32,7 @@ final class BankMatch extends Model
     public $timestamps = false;
 
     /** @var list<string> */
-    protected $fillable = ['bank_transaction_id', 'journal_line_id', 'amount', 'match_type', 'matched_by', 'matched_at'];
+    protected $fillable = ['bank_transaction_id', 'journal_line_id', 'amount', 'match_type', 'matched_by', 'matched_at', 'match_group', 'rule_id'];
 
     /** @return array<string, string> */
     protected function casts(): array

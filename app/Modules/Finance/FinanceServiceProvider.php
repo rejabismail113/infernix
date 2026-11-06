@@ -14,6 +14,7 @@ use App\Kernel\Identity\Services\PermissionService;
 use App\Kernel\Notifications\PendingApprovalRegistry;
 use App\Kernel\Reports\ReportCatalog;
 use App\Kernel\Reports\ReportDefinition;
+use App\Kernel\Reports\ReportTable;
 use App\Modules\Assets\Events\AssetDepreciationDue;
 use App\Modules\Assets\Events\AssetDisposed;
 use App\Modules\Finance\Http\Controllers\ReportController;
@@ -36,6 +37,7 @@ use App\Modules\Finance\Policies\JournalPolicy;
 use App\Modules\Finance\Policies\PaymentPolicy;
 use App\Modules\Finance\Policies\TransactionPolicy;
 use App\Modules\Finance\Reports\FinanceReports;
+use App\Modules\Finance\Services\BankService;
 use App\Modules\Finance\Services\FinanceRecordsService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Event;
@@ -86,6 +88,22 @@ final class FinanceServiceProvider extends ServiceProvider
                     in_array($key, $asOf, true) => ['as_of'], $key === 'claims-outstanding' => [], $key === 'profit-and-loss' => ['from', 'to', 'basis'], $key === 'general-ledger' => ['from', 'to', 'account_id'], default => ['from', 'to']
                 }));
         }
+        $catalog->register(new ReportDefinition('finance.bank-unmatched-ageing', 'Bank unmatched ageing', 'Finance', 'finance_reports', function (array $f): array {
+            $asOf = Carbon::parse($f['as_of'] ?? today()->toDateString());
+            $rows = [];
+            foreach (BankAccount::query()->with('companyAccount')->get() as $b) {
+                $a = app(BankService::class)->ageing($b, $asOf);
+                foreach (['bank' => 'Statement lines not in books', 'ledger' => 'Book lines not on statement'] as $side => $label) {
+                    $row = ['bank' => $b->label(), 'side' => $label];
+                    foreach ($a['buckets'] as $k) {
+                        $row[$k] = $a[$side][$k]['count'].' / '.$a[$side][$k]['amount'];
+                    }
+                    $rows[] = $row;
+                }
+            }
+
+            return ReportTable::make('Bank unmatched ageing at '.$asOf->toDateString(), ['bank' => 'Bank', 'side' => 'Side', '0-7' => '0–7 days (count / RM)', '8-30' => '8–30 days', '31-60' => '31–60 days', 'over 60' => 'Over 60 days'], $rows);
+        }, ['as_of']));
         $catalog->register(new ReportDefinition('finance.reconciliation-status', 'Bank reconciliation status', 'Finance', 'finance_reports',
             fn (array $f): array => app(FinanceReports::class)->reconciliationSummary(Carbon::parse($f['as_of'] ?? today()->toDateString())), ['as_of']));
 

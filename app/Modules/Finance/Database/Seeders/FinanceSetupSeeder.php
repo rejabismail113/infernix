@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Modules\Finance\Database\Seeders;
 
 use App\Kernel\Approval\ApprovalMatrix;
+use App\Kernel\Identity\Models\User;
 use App\Modules\Administration\Models\Company;
 use App\Modules\Administration\Models\CompanyBankAccount;
 use App\Modules\Finance\Models\BankAccount;
 use App\Modules\Finance\Models\BankImportProfile;
+use App\Modules\Finance\Models\BankMatchRule;
 use App\Modules\Finance\Models\ChartAccount;
 use Illuminate\Database\Seeder;
 
@@ -30,10 +32,17 @@ final class FinanceSetupSeeder extends Seeder
         $cba->forceFill(['gl_account_id' => $gl->id])->saveQuietly();
 
         foreach ([
-            ['Generic CSV (date, description, reference, amount)', ['date' => 0, 'description' => 1, 'reference' => 2, 'amount' => 3], 'd/m/Y', 'Signed amount column; positive = money in.'],
-            ['Maybank-style (date, description, debit, credit, balance)', ['date' => 0, 'description' => 1, 'debit' => 2, 'credit' => 3, 'balance' => 4], 'd/m/Y', 'PLACEHOLDER — confirm against a real Maybank export.'],
-        ] as [$name, $map, $fmt, $notes]) {
-            BankImportProfile::query()->firstOrCreate(['name' => $name], ['column_mapping' => $map, 'date_format' => $fmt, 'has_header' => true, 'notes' => $notes, 'active' => true]);
+            ['generic', 'Generic CSV (date, description, reference, amount)', null, ['date' => 0, 'description' => 1, 'reference' => 2, 'amount' => 3], 'd/m/Y', 0, 'Signed amount column; positive = money in.'],
+            ['maybank', 'Maybank-style (date, description, debit, credit, balance)', 'Maybank', ['date' => 0, 'description' => 1, 'debit' => 2, 'credit' => 3, 'balance' => 4], 'd/m/Y', 0, 'PLACEHOLDER — confirm against a real Maybank2u business export.'],
+            ['cimb', 'CIMB-style (date, description, reference, withdrawal, deposit, balance)', 'CIMB', ['date' => 0, 'description' => 1, 'reference' => 2, 'debit' => 3, 'credit' => 4, 'balance' => 5], 'd/m/Y', 0, 'PLACEHOLDER — confirm against a real CIMB BizChannel export.'],
+        ] as [$key, $name, $bankName, $map, $fmt, $skip, $notes]) {
+            $profile = BankImportProfile::query()->where('template_key', $key)->orWhere('name', $name)->first() ?? new BankImportProfile;
+            $profile->forceFill(['template_key' => $key, 'name' => $name, 'bank_name' => $bankName, 'column_mapping' => $map, 'date_format' => $fmt, 'has_header' => true, 'skip_rows' => $skip, 'delimiter' => ',', 'notes' => $notes, 'active' => $profile->active ?? true])->save();
+        }
+        $owner = User::query()->whereHas('roles', fn ($r) => $r->where('code', 'OWN'))->orderBy('id')->first();
+        if ($owner !== null && ! BankMatchRule::query()->exists()) {
+            BankMatchRule::query()->create(['name' => 'Document number in bank reference', 'priority' => 10, 'direction' => 'any', 'date_window_days' => 7,
+                'reference_pattern' => '/\\b((?:PV|RC|INV|BL|PB)-\\d{4}-\\d{4})\\b/i', 'active' => true, 'created_by' => $owner->id, 'notes' => 'PLACEHOLDER example rule: our document number quoted in the bank reference.']);
         }
 
         // Up to RM 5,000: one approver (FIN or OWN). Above: FIN or OWN, then OWN (a different person).

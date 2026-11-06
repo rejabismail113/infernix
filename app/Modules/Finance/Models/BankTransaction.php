@@ -7,8 +7,10 @@ namespace App\Modules\Finance\Models;
 use App\Kernel\Audit\Auditable;
 use App\Kernel\Money\MoneyCast;
 use Brick\Money\Money;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
@@ -26,6 +28,7 @@ use Illuminate\Support\Carbon;
  * @property string $fingerprint
  * @property string $status
  * @property-read BankMatch|null $match
+ * @property-read Collection<int, BankMatch> $matches
  */
 final class BankTransaction extends Model
 {
@@ -49,6 +52,12 @@ final class BankTransaction extends Model
     /** @return HasOne<BankMatch, $this> */
     public function match(): HasOne
     {
-        return $this->hasOne(BankMatch::class);
+        return $this->hasOne(BankMatch::class)->oldestOfMany();
+    }
+
+    /** @return HasMany<BankMatch, $this> */
+    public function matches(): HasMany
+    {
+        return $this->hasMany(BankMatch::class);
     }
 }

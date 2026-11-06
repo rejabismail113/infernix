@@ -18,11 +18,15 @@ use Illuminate\Database\Eloquent\Model;
  * @property bool $has_header
  * @property string|null $notes
  * @property bool $active
+ * @property string|null $template_key
+ * @property string|null $bank_name
+ * @property string $delimiter
+ * @property int $skip_rows
  */
 final class BankImportProfile extends Model
 {
     /** @var list<string> */
-    protected $fillable = ['name', 'column_mapping', 'date_format', 'has_header', 'notes', 'active'];
+    protected $fillable = ['name', 'column_mapping', 'date_format', 'has_header', 'notes', 'active', 'template_key', 'bank_name', 'delimiter', 'skip_rows'];
 
     /** @return array<string, string> */
     protected function casts(): array

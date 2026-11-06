@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Kernel\Identity\Http\Middleware\RequireRecentAuth;
 use App\Modules\Administration\Http\Controllers\AccessReportController;
 use App\Modules\Administration\Http\Controllers\AuditLogController;
+use App\Modules\Administration\Http\Controllers\BackupController;
 use App\Modules\Administration\Http\Controllers\CompanyController;
 use App\Modules\Administration\Http\Controllers\DelegationController;
 use App\Modules\Administration\Http\Controllers\DictionaryController;
@@ -56,6 +57,8 @@ Route::middleware(['web', 'app'])->prefix('admin')->name('admin.')->group(functi
     Route::post('claim-types/{claimType}/rates', [DictionaryController::class, 'storeRate'])->name('claim-types.rates.store');
 
     Route::get('notification-rules', [NotificationRuleController::class, 'index'])->name('notification-rules.index');
+    Route::get('backups', [BackupController::class, 'index'])->name('backups.index');
+    Route::post('backups', [BackupController::class, 'run'])->middleware([RequireRecentAuth::class, 'throttle:5,1'])->name('backups.run');
     Route::post('notification-rules', [NotificationRuleController::class, 'store'])->name('notification-rules.store');
     Route::put('notification-rules/{rule}', [NotificationRuleController::class, 'update'])->name('notification-rules.update');
 

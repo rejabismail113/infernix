@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Kernel\Http\HealthController;
+use App\Kernel\Http\LocaleController;
 use App\Kernel\Identity\Http\Controllers\AuthenticatedSessionController;
 use App\Kernel\Identity\Http\Controllers\DashboardController;
 use App\Kernel\Identity\Http\Controllers\InvitationAcceptController;
@@ -13,7 +15,11 @@ use App\Kernel\Search\Http\SearchController;
 use Illuminate\Support\Facades\Route;
 
 /** @see SRS G-01 */
+Route::get('/health/live', [HealthController::class, 'live'])->middleware('throttle:120,1')->name('health.live');
+Route::get('/health/ready', [HealthController::class, 'ready'])->middleware('throttle:60,1')->name('health.ready');
+
 Route::middleware('web')->group(function (): void {
+    Route::post('/locale', LocaleController::class)->middleware('throttle:30,1')->name('locale.update');
     Route::middleware('guest')->group(function (): void {
         Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
         Route::post('/login', [AuthenticatedSessionController::class, 'store'])->middleware('throttle:10,1');

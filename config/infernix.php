@@ -102,6 +102,18 @@ return [
         'supplier_tin' => env('EINVOICE_SUPPLIER_TIN'), // PLACEHOLDER — the company's LHDN TIN
     ],
 
+    'release' => env('APP_RELEASE', 'v1.0.0-rc1'),
+    // NFR-06: encrypted nightly backups. The passphrase lives ONLY in the environment / secret store (M13-02).
+    'backup' => [
+        'disk' => env('BACKUP_DISK', 'backups'),
+        'passphrase' => env('BACKUP_PASSPHRASE'),
+    ],
+    'observability' => [
+        'log_requests' => (bool) env('LOG_REQUESTS', true),
+        'sentry_dsn' => env('SENTRY_DSN'),
+        'otlp_endpoint' => env('OTEL_EXPORTER_OTLP_ENDPOINT'),
+    ],
+
     'pdf' => ['driver' => env('PDF_DRIVER', 'browsershot')],
     'features' => [
         'myinvois' => (bool) env('FEATURE_MYINVOIS', false),

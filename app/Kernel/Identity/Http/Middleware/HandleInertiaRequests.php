@@ -69,12 +69,13 @@ final class HandleInertiaRequests extends Middleware
             ['Dictionaries', 'admin.dictionaries.index', 'dictionaries', 'view', 'Administration', 'list'],
             ['Notification rules', 'admin.notification-rules.index', 'notification_rules', 'view', 'Administration', 'bell'],
             ['Audit log', 'admin.audit-log.index', 'audit_log', 'view', 'Administration', 'audit'],
+            ['Backups', 'admin.backups.index', 'backup_status', 'view', 'Administration', 'download'],
             ['Access reports', 'admin.reports.user-access', 'reports_access', 'view', 'Administration', 'report'],
         ];
-        $nav = [['label' => 'Dashboard', 'href' => route('dashboard'), 'group' => 'Overview', 'icon' => 'home']];
+        $nav = [['label' => __('Dashboard'), 'href' => route('dashboard'), 'group' => __('Overview'), 'icon' => 'home']];
         foreach ($items as [$label, $routeName, $resource, $action, $group, $icon]) {
             if ($p->can($user, $action, $resource)) {
-                $nav[] = ['label' => $label, 'href' => route($routeName), 'group' => $group, 'icon' => $icon];
+                $nav[] = ['label' => __($label), 'href' => route($routeName), 'group' => __($group), 'icon' => $icon];
             }
         }
 
@@ -100,11 +101,23 @@ final class HandleInertiaRequests extends Middleware
             // Sidebar entries are filtered by the same PermissionService the routes use (UI hiding is NOT a control).
             'nav' => fn () => $user instanceof User ? $this->nav($user) : [],
             'notifications' => fn () => $user instanceof User ? ['unread' => $user->unreadNotifications()->count()] : ['unread' => 0],
+            // NFR-12: UI strings for the client t() helper (lang/{locale}.json; EN keys are the source text).
+            'i18n' => fn () => ['locale' => app()->getLocale(), 'messages' => $this->messages()],
             'flash' => fn () => [
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),
                 'import' => $request->session()->get('import'),
             ],
         ];
+    }
+
+    /** @return array<string, string> */
+    private function messages(): array
+    {
+        $path = lang_path(app()->getLocale().'.json');
+        /** @var array<string, string> $m */
+        $m = is_file($path) ? (json_decode((string) file_get_contents($path), true) ?: []) : [];
+
+        return $m;
     }
 }

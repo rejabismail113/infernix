@@ -6,7 +6,7 @@ APP   := $(DC) exec -T app
 # One-off container: works before vendor/ exists (the long-running app container needs vendor/ to start).
 RUN   := $(DC) run --rm --no-deps -T app
 
-.PHONY: help up down setup fresh seed migrate test test-php test-js lint lint-php lint-js stan pint fix ci logs shell
+.PHONY: help up down setup fresh seed migrate test test-php test-js lint lint-php lint-js stan pint fix ci logs shell backup restore-test bench
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -74,3 +74,12 @@ logs: ## Tail app logs
 
 shell: ## Shell into app container
 	$(DC) exec app bash
+
+backup: ## Run an encrypted database backup now (NFR-06)
+	docker compose exec -T app php artisan backup:run backup
+
+restore-test: ## Restore the newest backup into a scratch DB and verify it (NFR-06, M12-06)
+	scripts/restore-test.sh
+
+bench: ## Seed a 50k-row dataset and measure p95 of common list/detail pages (NFR-05)
+	docker compose exec -T app php artisan perf:benchmark --rows=50000

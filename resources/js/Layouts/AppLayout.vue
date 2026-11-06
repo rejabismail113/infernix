@@ -10,7 +10,9 @@ import Icon from '@/Components/Icon.vue';
 import Breadcrumbs, { type Crumb } from '@/Components/Shell/Breadcrumbs.vue';
 import PageHeader from '@/Components/Shell/PageHeader.vue';
 import Sidebar from '@/Components/Shell/Sidebar.vue';
+import { useT } from '@/lib/i18n';
 import type { SharedProps } from '@/types';
+import { router } from '@inertiajs/vue3';
 
 withDefaults(defineProps<{ title?: string; breadcrumbs?: Crumb[]; status?: string | null; statusLabel?: string }>(), {
     title: '', breadcrumbs: () => [], status: null, statusLabel: undefined,
@@ -18,6 +20,8 @@ withDefaults(defineProps<{ title?: string; breadcrumbs?: Crumb[]; status?: strin
 
 const page = usePage<SharedProps>();
 const mobileOpen = ref(false);
+const t = useT();
+const setLocale = (locale: 'en' | 'ms') => router.post(route('locale.update'), { locale }, { preserveScroll: true });
 </script>
 
 <template>
@@ -25,7 +29,7 @@ const mobileOpen = ref(false);
     <a
         href="#main"
         class="sr-only z-50 rounded bg-white px-3 py-2 focus:not-sr-only focus:fixed focus:left-2 focus:top-2"
-    >Skip to content</a>
+    >{{ t('Skip to content') }}</a>
     <div class="flex min-h-screen bg-surface-50">
         <aside class="hidden w-64 shrink-0 border-r border-surface-200 bg-white lg:block">
             <div class="sticky top-0 h-screen">
@@ -53,7 +57,7 @@ const mobileOpen = ref(false);
             <button
                 type="button"
                 class="flex-1 bg-surface-900/30"
-                aria-label="Close menu"
+                :aria-label="t('Close menu')"
                 @click="mobileOpen = false"
             />
         </div>
@@ -64,7 +68,7 @@ const mobileOpen = ref(false);
                     <button
                         type="button"
                         class="rounded p-1.5 text-surface-600 hover:bg-surface-100 lg:hidden"
-                        aria-label="Open menu"
+                        :aria-label="t('Open menu')"
                         @click="mobileOpen = true"
                     >
                         <Icon name="menu" />
@@ -75,7 +79,7 @@ const mobileOpen = ref(false);
                     <Link
                         :href="route('notifications.index')"
                         class="relative rounded-md p-1.5 text-surface-600 hover:bg-surface-100"
-                        :aria-label="`Notifications (${page.props.notifications?.unread ?? 0} unread)`"
+                        :aria-label="`${t('Notifications')} (${page.props.notifications?.unread ?? 0} ${t('unread')})`"
                         data-test="bell"
                     >
                         <Icon name="bell" />
@@ -84,6 +88,25 @@ const mobileOpen = ref(false);
                             class="absolute -right-1 -top-1 min-w-[1.1rem] rounded-full bg-brand-600 px-1 text-center text-[10px] font-semibold leading-4 text-white"
                         >{{ page.props.notifications?.unread }}</span>
                     </Link>
+                    <div
+                        class="flex overflow-hidden rounded-md border border-surface-300 text-xs"
+                        role="group"
+                        :aria-label="t('Language')"
+                        data-test="locale-toggle"
+                    >
+                        <button
+                            v-for="l in (['en', 'ms'] as const)"
+                            :key="l"
+                            type="button"
+                            class="px-2 py-1"
+                            :class="(page.props.i18n?.locale ?? 'en') === l ? 'bg-brand-600 text-white' : 'hover:bg-surface-100'"
+                            :aria-pressed="(page.props.i18n?.locale ?? 'en') === l"
+                            :lang="l"
+                            @click="setLocale(l)"
+                        >
+                            {{ l === 'en' ? 'EN' : 'BM' }}
+                        </button>
+                    </div>
                     <span
                         class="hidden text-surface-700 sm:inline"
                         data-test="user-name"
@@ -97,7 +120,7 @@ const mobileOpen = ref(false);
                         <Icon
                             name="logout"
                             :size="16"
-                        /> Log out
+                        /> {{ t('Log out') }}
                     </Link>
                 </div>
             </header>

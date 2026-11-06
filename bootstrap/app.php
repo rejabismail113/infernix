@@ -3,10 +3,14 @@
 declare(strict_types=1);
 
 use App\Kernel\Http\Idempotent;
+use App\Kernel\Http\Middleware\AssignRequestId;
+use App\Kernel\Http\Middleware\SecurityHeaders;
+use App\Kernel\Http\Middleware\SetLocale;
 use App\Kernel\Identity\Http\Middleware\EnsureMfa;
 use App\Kernel\Identity\Http\Middleware\EnsureUserIsActive;
 use App\Kernel\Identity\Http\Middleware\HandleInertiaRequests;
 use App\Kernel\Identity\Http\Middleware\RequireRecentAuth;
+use App\Kernel\Observability\ErrorReporter;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -24,7 +28,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->prepend(AssignRequestId::class);
+        $middleware->append(SecurityHeaders::class);
         $middleware->web(append: [
+            SetLocale::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
@@ -43,6 +50,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectUsersTo(fn () => route('dashboard'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->report(function (Throwable $e): void {
+            app(ErrorReporter::class)->report($e);
+        });
+        $exceptions->dontFlash(['current_password', 'password', 'password_confirmation', 'id_number', 'account_no', 'reason']);
         // Inertia error pages (403 page etc.) for browser requests; JSON/API and debug 500s are untouched.
         $exceptions->respond(function (Response $response, Throwable $e, Request $request) {
             $status = $response->getStatusCode();

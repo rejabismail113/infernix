@@ -10,5 +10,6 @@ export interface SharedProps {
     flash: { success: string | null; error: string | null };
     nav: { label: string; href: string; group: string; icon: string }[];
     notifications?: { unread: number };
+    i18n?: { locale: 'en' | 'ms'; messages: Record<string, string> };
     [key: string]: unknown;
 }

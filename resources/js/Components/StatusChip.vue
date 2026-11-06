@@ -3,6 +3,7 @@
  * Status chip with a consistent tone per business status (SRS §5.1 statuses). Unknown statuses are neutral.
  */
 import { computed } from 'vue';
+import { useT } from '@/lib/i18n';
 
 export type Tone = 'neutral' | 'info' | 'warning' | 'success' | 'danger' | 'brand';
 
@@ -27,7 +28,9 @@ const CLASSES: Record<Tone, string> = {
 const props = withDefaults(defineProps<{ status: string; label?: string; tone?: Tone; size?: 'sm' | 'md' }>(), { label: undefined, tone: undefined, size: 'sm' });
 
 const resolvedTone = computed<Tone>(() => props.tone ?? TONES[props.status.toLowerCase()] ?? 'neutral');
-const text = computed(() => props.label ?? props.status.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase()));
+const t = useT();
+// NFR-12: BM label when the status has a translation; otherwise the prettified status.
+const text = computed(() => props.label ?? (t(props.status) !== props.status ? t(props.status) : props.status.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())));
 </script>
 
 <template>

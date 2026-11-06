@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Kernel\Observability\JsonLogFormatter;
 use App\Kernel\Secrets\RedactSecretsInLogs;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
@@ -59,6 +60,16 @@ return [
             'driver' => 'stack',
             'channels' => explode(',', env('LOG_STACK', 'single')),
             'ignore_exceptions' => false,
+        ],
+
+        // Structured JSON (NFR-10): LOG_STACK=json,single (or json only) in production.
+        'json' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/infernix.json.log'),
+            'level' => env('LOG_LEVEL', 'info'),
+            'days' => (int) env('LOG_DAILY_DAYS', 30),
+            'tap' => [RedactSecretsInLogs::class, JsonLogFormatter::class],
+            'replace_placeholders' => true,
         ],
 
         'single' => [

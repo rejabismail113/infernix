@@ -6,6 +6,8 @@ namespace App\Modules\Administration;
 
 use App\Kernel\Documents\DocumentLinkRegistry;
 use App\Kernel\Documents\LinkableEntityType;
+use App\Modules\Administration\Console\BackupCommand;
+use App\Modules\Administration\Console\ImportCommand;
 use App\Modules\Administration\Models\ClaimType;
 use App\Modules\Administration\Models\ClaimTypeRate;
 use App\Modules\Administration\Models\Company;
@@ -44,6 +46,9 @@ final class AdministrationServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        if ($this->app->runningInConsole()) {
+            $this->commands([BackupCommand::class, ImportCommand::class]);
+        }
         $this->loadMigrationsFrom(__DIR__.'/Database/Migrations');
         $this->loadRoutesFrom(__DIR__.'/Routes/web.php');
 

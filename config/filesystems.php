@@ -64,6 +64,26 @@ return [
             'report' => false,
         ],
 
+        // Encrypted database backups (NFR-06): a separate PRIVATE bucket with versioning + object lock recommended.
+        'backups' => [
+            'driver' => 's3',
+            'key' => env('BACKUP_AWS_ACCESS_KEY_ID', env('AWS_ACCESS_KEY_ID')),
+            'secret' => env('BACKUP_AWS_SECRET_ACCESS_KEY', env('AWS_SECRET_ACCESS_KEY')),
+            'region' => env('AWS_DEFAULT_REGION', 'ap-southeast-1'),
+            'bucket' => env('BACKUP_BUCKET', 'infernix-backups'),
+            'endpoint' => env('BACKUP_AWS_ENDPOINT', env('AWS_ENDPOINT')),
+            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', true),
+            'visibility' => 'private',
+            'throw' => true,
+        ],
+        'backups_local' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/backups'),
+            'visibility' => 'private',
+            'serve' => false,
+            'throw' => true,
+        ],
+
         // Local private fallback for environments without an S3 object store (never under /public).
         'documents_local' => [
             'driver' => 'local',

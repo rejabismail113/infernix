@@ -23,10 +23,11 @@ export default {
                     300: '#FFAE5C',
                     400: '#FFA000',
                     500: '#FF8A00',
-                    600: '#FF6A00',
-                    700: '#D95700',
-                    800: '#A84300',
-                    900: '#7A3000',
+                    // 600-900 darkened for WCAG AA (NFR-09): white on 600 ≥ 4.8:1, 700 text on white ≥ 6.3:1.
+                    600: '#B84A00',
+                    700: '#A34100',
+                    800: '#7F3300',
+                    900: '#5C2500',
                 },
                 surface: {
                     0: '#FFFFFF',
@@ -34,8 +35,8 @@ export default {
                     100: '#F1F3F6',
                     200: '#E4E7EC',
                     300: '#CFD4DC',
-                    400: '#9AA3B2',
-                    500: '#6B7280',
+                    400: '#6B7385', // used for small helper text: ≥ 4.5:1 on white / surface-50 (NFR-09)
+                    500: '#5B6372',
                     700: '#374151',
                     900: '#111827',
                 },

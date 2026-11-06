@@ -11,6 +11,7 @@ defineProps<{ label: string; error?: string; id: string }>();
         <slot />
         <p
             v-if="error"
+            :id="`${id}-error`"
             class="mt-1 text-sm text-red-600"
             role="alert"
         >

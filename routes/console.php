@@ -24,3 +24,6 @@ Schedule::job(new NotifyWarrantyExpiries)->dailyAt('08:00')->name('warranty-expi
 Schedule::job(new NotifyCredentialRotations)->dailyAt('08:30')->name('credential-rotations')->withoutOverlapping();
 Schedule::job(new SendScheduledReports)->dailyAt('06:50')->name('scheduled-reports')->withoutOverlapping();
 Schedule::job(new ProcessEInvoiceOutbox)->everyMinute()->name('einvoice-outbox')->withoutOverlapping()->when(fn () => (bool) config('infernix.features.myinvois'));
+// NFR-06 / M12-06: nightly encrypted backup (+ retention prune), quarterly restore test into a scratch DB.
+Schedule::command('backup:run backup')->dailyAt('01:30')->name('backup-nightly')->withoutOverlapping()->onOneServer();
+Schedule::command('backup:run restore-test')->cron('30 3 1 */3 *')->name('backup-restore-test')->withoutOverlapping()->onOneServer();

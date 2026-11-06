@@ -52,6 +52,9 @@ const input = (e: Event): string => (e.target as HTMLInputElement).value;
                 <select
                     v-else-if="f.type === 'select'"
                     :id="`${idPrefix}-${f.key}`"
+                    :aria-invalid="err(f.key) ? 'true' : undefined"
+
+                    :aria-describedby="err(f.key) ? `${idPrefix}-${f.key}-error` : undefined"
                     :value="val(f.key) ?? ''"
                     :disabled="disabled"
                     class="w-full rounded-md border border-surface-300 px-3 py-2 text-sm"
@@ -71,6 +74,9 @@ const input = (e: Event): string => (e.target as HTMLInputElement).value;
                 <textarea
                     v-else-if="f.type === 'textarea'"
                     :id="`${idPrefix}-${f.key}`"
+                    :aria-invalid="err(f.key) ? 'true' : undefined"
+
+                    :aria-describedby="err(f.key) ? `${idPrefix}-${f.key}-error` : undefined"
                     :value="text(f.key)"
                     :disabled="disabled"
                     rows="3"
@@ -81,6 +87,8 @@ const input = (e: Event): string => (e.target as HTMLInputElement).value;
                 <input
                     v-else
                     :id="`${idPrefix}-${f.key}`"
+                    :aria-invalid="err(f.key) ? 'true' : undefined"
+                    :aria-describedby="err(f.key) ? `${idPrefix}-${f.key}-error` : undefined"
                     :type="f.type === 'number' ? 'number' : f.type"
                     :value="text(f.key)"
                     :disabled="disabled"

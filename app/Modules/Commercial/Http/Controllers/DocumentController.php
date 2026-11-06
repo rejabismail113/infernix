@@ -55,9 +55,9 @@ final class DocumentController
         private readonly PermissionService $permissions,
     ) {}
 
-    public function index(Request $request, string $docType): Response
+    public function index(Request $request): Response
     {
-        $type = DocumentType::from($docType);
+        $type = $this->type($request);
         $class = DocumentRegistry::modelFor($type);
         $this->authorize('viewAny', $class);
         /** @var User $user */
@@ -82,9 +82,9 @@ final class DocumentController
         ]);
     }
 
-    public function create(Request $request, string $docType): Response
+    public function create(Request $request): Response
     {
-        $type = DocumentType::from($docType);
+        $type = $this->type($request);
         abort_if($type === DocumentType::CreditNote, 404); // credit notes start from an invoice
         $this->authorize('create', DocumentRegistry::modelFor($type));
         /** @var User $user */
@@ -102,9 +102,9 @@ final class DocumentController
         ]);
     }
 
-    public function store(Request $request, string $docType): RedirectResponse
+    public function store(Request $request): RedirectResponse
     {
-        $type = DocumentType::from($docType);
+        $type = $this->type($request);
         abort_if($type === DocumentType::CreditNote, 404);
         $this->authorize('create', DocumentRegistry::modelFor($type));
         $data = $this->validated($request, $type);
@@ -121,9 +121,9 @@ final class DocumentController
         }, '');
     }
 
-    public function show(Request $request, string $docType, int $document, DocumentStore $documents): Response
+    public function show(Request $request, string $document, DocumentStore $documents): Response
     {
-        $type = DocumentType::from($docType);
+        $type = $this->type($request);
         $doc = $this->find($type, $document);
         $this->authorize('view', $doc);
         /** @var User $user */
@@ -179,9 +179,9 @@ final class DocumentController
         ]);
     }
 
-    public function edit(Request $request, string $docType, int $document): Response
+    public function edit(Request $request, string $document): Response
     {
-        $type = DocumentType::from($docType);
+        $type = $this->type($request);
         $doc = $this->find($type, $document);
         $this->authorize('update', $doc);
         abort_unless($doc->isEditable(), 403, 'Only drafts can be edited.');
@@ -194,9 +194,9 @@ final class DocumentController
         ]);
     }
 
-    public function update(Request $request, string $docType, int $document): RedirectResponse
+    public function update(Request $request, string $document): RedirectResponse
     {
-        $type = DocumentType::from($docType);
+        $type = $this->type($request);
         $doc = $this->find($type, $document);
         $this->authorize('update', $doc);
         $data = $this->validated($request, $type);
@@ -210,9 +210,9 @@ final class DocumentController
         }, '');
     }
 
-    public function destroy(Request $request, string $docType, int $document): RedirectResponse
+    public function destroy(Request $request, string $document): RedirectResponse
     {
-        $type = DocumentType::from($docType);
+        $type = $this->type($request);
         $doc = $this->find($type, $document);
         $this->authorize('update', $doc);
         /** @var User $user */
@@ -225,26 +225,26 @@ final class DocumentController
         }, '');
     }
 
-    public function submit(Request $request, string $docType, int $document): RedirectResponse
+    public function submit(Request $request, string $document): RedirectResponse
     {
-        $doc = $this->find(DocumentType::from($docType), $document);
+        $doc = $this->find($this->type($request), $document);
         $this->authorize('update', $doc);
 
         return $this->attempt(fn () => $this->service->submit($doc, $this->user($request)), __('Submitted for approval.'));
     }
 
-    public function approve(Request $request, string $docType, int $document): RedirectResponse
+    public function approve(Request $request, string $document): RedirectResponse
     {
-        $doc = $this->find(DocumentType::from($docType), $document);
+        $doc = $this->find($this->type($request), $document);
         $this->authorize('approve', $doc);
         $reason = $request->validate(['override_reason' => ['nullable', 'string', 'max:500']])['override_reason'] ?? null;
 
         return $this->attempt(fn () => $this->service->approve($doc, $this->user($request), $reason), __('Approved.'));
     }
 
-    public function returnToDraft(Request $request, string $docType, int $document): RedirectResponse
+    public function returnToDraft(Request $request, string $document): RedirectResponse
     {
-        $doc = $this->find(DocumentType::from($docType), $document);
+        $doc = $this->find($this->type($request), $document);
         $user = $this->user($request);
         abort_unless($user->can('approve', $doc) || $user->can('update', $doc), 403);
         $reason = $request->validate(['reason' => ['required', 'string', 'max:500']])['reason'];
@@ -252,16 +252,16 @@ final class DocumentController
         return $this->attempt(fn () => $this->service->returnToDraft($doc, $user, $reason), __('Returned to draft.'));
     }
 
-    public function issue(Request $request, string $docType, int $document): RedirectResponse
+    public function issue(Request $request, string $document): RedirectResponse
     {
-        $doc = $this->find(DocumentType::from($docType), $document);
+        $doc = $this->find($this->type($request), $document);
         $this->authorize('update', $doc);
         $date = $request->validate(['issue_date' => ['nullable', 'date']])['issue_date'] ?? null;
 
         return $this->attempt(fn () => $this->service->issue($doc, $this->user($request), $date), __(':type issued.', ['type' => $doc->type->label()]));
     }
 
-    public function respond(Request $request, int $document): RedirectResponse
+    public function respond(Request $request, string $document): RedirectResponse
     {
         /** @var Quotation $q */
         $q = $this->find(DocumentType::Quotation, $document);
@@ -271,7 +271,7 @@ final class DocumentController
         return $this->attempt(fn () => $this->service->recordClientResponse($q, (bool) $data['accepted'], $this->user($request), $data['note'] ?? null), $data['accepted'] ? __('Marked as accepted by the client.') : __('Marked as rejected by the client.'));
     }
 
-    public function revise(Request $request, int $document): RedirectResponse
+    public function revise(Request $request, string $document): RedirectResponse
     {
         /** @var Quotation $q */
         $q = $this->find(DocumentType::Quotation, $document);
@@ -285,7 +285,7 @@ final class DocumentController
         }, '');
     }
 
-    public function convertToInvoice(Request $request, int $document): RedirectResponse
+    public function convertToInvoice(Request $request, string $document): RedirectResponse
     {
         /** @var Quotation $q */
         $q = $this->find(DocumentType::Quotation, $document);
@@ -299,7 +299,7 @@ final class DocumentController
         }, '');
     }
 
-    public function convertToProject(Request $request, int $document): RedirectResponse
+    public function convertToProject(Request $request, string $document): RedirectResponse
     {
         /** @var Quotation $q */
         $q = $this->find(DocumentType::Quotation, $document);
@@ -314,16 +314,16 @@ final class DocumentController
         }, '');
     }
 
-    public function void(Request $request, string $docType, int $document): RedirectResponse
+    public function void(Request $request, string $document): RedirectResponse
     {
-        $doc = $this->find(DocumentType::from($docType), $document);
+        $doc = $this->find($this->type($request), $document);
         $this->authorize('approve', $doc);
         $reason = $request->validate(['reason' => ['required', 'string', 'max:500']])['reason'];
 
         return $this->attempt(fn () => $this->service->void($doc, $this->user($request), $reason), __('Voided. The number is kept and marked VOID.'));
     }
 
-    public function creditNote(Request $request, int $document): RedirectResponse
+    public function creditNote(Request $request, string $document): RedirectResponse
     {
         /** @var Invoice $inv */
         $inv = $this->find(DocumentType::Invoice, $document);
@@ -337,12 +337,18 @@ final class DocumentController
         }, '');
     }
 
-    public function regenerate(Request $request, string $docType, int $document): RedirectResponse
+    public function regenerate(Request $request, string $document): RedirectResponse
     {
-        $doc = $this->find(DocumentType::from($docType), $document);
+        $doc = $this->find($this->type($request), $document);
         $this->authorize('update', $doc);
 
         return $this->attempt(fn () => $this->service->regeneratePdf($doc, $this->user($request)), __('PDF generated.'));
+    }
+
+    /** The route supplies the document type (quotations / invoices / credit-notes groups). */
+    private function type(Request $request): DocumentType
+    {
+        return DocumentType::from((string) $request->route('docType'));
     }
 
     /** Projects are owned by M02: a project may be referenced only if it is in the user's visible options. */
@@ -351,9 +357,9 @@ final class DocumentController
         abort_unless(in_array($projectId, array_column($this->projects->options($user), 'id'), true), 403);
     }
 
-    private function find(DocumentType $type, int $id): CommercialDocument
+    private function find(DocumentType $type, string|int $id): CommercialDocument
     {
-        return DocumentRegistry::modelFor($type)::query()->findOrFail($id);
+        return DocumentRegistry::modelFor($type)::query()->findOrFail((int) $id);
     }
 
     private function user(Request $request): User

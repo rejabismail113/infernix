@@ -861,6 +861,28 @@ Legend: `UNIQUE(commercial_documents.company_id, type, document_no, revision_no)
 `pdf_document_id` (documents.frozen=true); `UNIQUE(projects.source_quotation_id)`;
 `UNIQUE(project_members.project_id, staff_id, from_date)`.
 
+**As built in Prompt 3.** `clients` (M02: name, registration_no, tax_no, email, phone, contact_person, address jsonb,
+payment_terms_days, status) and a `projects` stub (code `PRJ-`, client_id, name, engagement_type, scope, contract_value,
+status_delivery, status_payment, `source_quotation_id` UNIQUE FK) — `leads`, members, milestones and training come in
+Prompt 4 via new migrations. `commercial_documents` additionally has `lines_snapshot jsonb` (lines + render extras as
+issued), `related_document_id` (credit note → invoice), `discount_total`, `settlement_status` (unpaid | partially_paid |
+paid), `amount_received`, `amount_credited`, `current_level`, `void_pdf_document_id`, `reversal_journal_id`,
+`internal_notes`, `issued_by`, `client_response_at`; `document_no` is allocated at issue and is unique per
+(company, type, number, revision). `document_template_versions` store `view_name` + `settings` (no user-supplied Blade,
+A-36). `document_lines` add `tax_rate` (snapshot) and `net_amount`. `receipts.journal_id` is NOT NULL; receipts carry
+`unapplied_amount`, `status` (posted | void), `reversal_journal_id`; allocations carry `voided_at` instead of ever being
+deleted.
+
+DB rules: `commercial_documents_immutable` (issued rows: only status/settlement/PDF-once/void fields change, legal status
+transitions only; issued rows never deleted), `document_lines_draft_only`, `document_template_versions_append_only`,
+`receipts_immutable`, `invoice_allocation_ceiling` (receipts + credits ≤ invoice total, invoice must be issued),
+`allocations_no_delete`; CHECK `amount_received + amount_credited ≤ total`.
+
+M11: `report_metrics(metric_id UK, metric_name, definition, owner_role, source, calculation_rule, refresh_time,
+security_scope, notes)` and `exports(user_id, report_key, format, filters jsonb, row_count, document_id)`.
+Kernel: `notifications` (Laravel database channel) and `notification_dispatches(notification_rule_id, user_id,
+dedupe_key, dispatched_on)` UNIQUE (rule, user, key).
+
 ## 7. HR (M04)
 
 ```mermaid

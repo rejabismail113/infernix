@@ -50,3 +50,16 @@ it('writes journals and journal lines only inside PostingService (M01-06)', func
     }
     expect($offenders)->toBe([]);
 })->group('M01-06', 'UAT-05');
+
+arch('Finance never depends on Commercial (payment vouchers go through the kernel IssuedDocumentRenderer)')
+    ->expect('App\Modules\Finance')->not->toUse('App\Modules\Commercial')
+    ->group('M03-06');
+
+arch('Commercial reaches Finance only through LedgerGateway and Projects only through kernel CRM contracts')
+    ->expect('App\Modules\Commercial')->not->toUse(['App\Modules\Finance\Models', 'App\Modules\Finance\Posting', 'App\Modules\Finance\Services\PostingService', 'App\Modules\Projects'])
+    ->group('M03-02', 'M03-03');
+
+arch('Projects and Reporting never write through other modules\' models')
+    ->expect('App\Modules\Projects')->not->toUse(['App\Modules\Commercial\Models', 'App\Modules\Commercial\Services', 'App\Modules\Finance'])
+    ->and('App\Modules\Reporting')->not->toUse(['App\Modules\Commercial\Models', 'App\Modules\Commercial\Services', 'App\Modules\Finance\Models', 'App\Modules\Finance\Services'])
+    ->group('M11-05');

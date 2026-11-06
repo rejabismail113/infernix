@@ -17,8 +17,9 @@ return [
 
     'roles' => ['OWN', 'FIN', 'PM', 'HR', 'STF', 'AUD', 'APP'],
 
-    // The read-only AUD role may still write these resources (SRS M01-09: only FIN/OWN/AUD set tax treatment).
-    'read_only_role_write_exceptions' => ['tax_review'],
+    // The read-only AUD role may still write these resources (SRS M01-09: only FIN/OWN/AUD set tax treatment;
+    // M11-05: an auditor's export is an audited Export Centre record, A-37).
+    'read_only_role_write_exceptions' => ['tax_review', 'exports'],
 
     // Dev/test-only fake sentinel used by leak tests (UAT-08, M13-05). Never a real secret.
     'secret_sentinel' => env('SECRET_SENTINEL', 'SENTINEL-DO-NOT-LEAK-9f3a7c1e'),

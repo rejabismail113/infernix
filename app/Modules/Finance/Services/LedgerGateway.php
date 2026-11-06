@@ -88,7 +88,7 @@ final class LedgerGateway
     /** @return list<array{id: int, label: string}> */
     public function revenueAccountOptions(): array
     {
-        return ChartAccount::query()->where('type', 'income')->where('postable', true)->where('active', true)->orderBy('code')->get()
+        return ChartAccount::query()->where('type', 'income')->where('is_postable', true)->where('active', true)->orderBy('code')->get()
             ->map(fn (ChartAccount $a): array => ['id' => $a->id, 'label' => "{$a->code} {$a->name}"])->values()->all();
     }
 

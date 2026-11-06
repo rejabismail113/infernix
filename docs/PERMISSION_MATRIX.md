@@ -87,6 +87,25 @@ enforced in the SQL query and the policy (UAT-01).
 | client PO / vendor PO | view create edit approve | view create edit | client PO: view create (S) | – | – | view | approve(S) |
 | memos / letters / certificates | view create | – | certificates: create (S: own trainings) | view create (memos, appointment letters) | view(O: addressed to me) | – | – |
 
+### As seeded in Prompt 3
+
+| Resource | OWN | FIN | PM | HR | STF | AUD | APP |
+|---|---|---|---|---|---|---|---|
+| clients | view create edit export | view create edit export | view create edit | – | – | view export | – |
+| projects | view create edit export | view create edit export | view(assigned) create edit(assigned) | – | – | view export | – |
+| quotations | view create edit approve export | view create edit approve export | view create edit (own) | – | – | view export | approve(assigned) |
+| invoices | view create edit approve export | view create edit approve export | – | – | – | view export | approve(assigned) |
+| credit_notes | view create edit approve export | view create edit approve export | – | – | – | view export | approve(assigned) |
+| receipts | view create edit export | view create edit export | – | – | – | view export | – |
+| document_templates | view edit | view | – | – | – | view | – |
+| dashboard_owner | view | – | – | – | – | view | – |
+| dashboard_finance | view | view | – | – | – | view | – |
+| exports (Export Centre) | view(own) create | view(own) create | view(own) create | view(own) create | – | view(own) create (A-37) | – |
+
+Approving a commercial document follows the approval matrix and maker-checker (preparer never approves unless an
+Owner records a reason). Issuing needs `edit` on the document; voiding needs `approve`. Every export also needs
+`export` on the report's own resource. The PM role currently has nothing it may export.
+
 ## M02 Projects & Training
 
 | Resource | OWN | FIN | PM | HR | STF | AUD | APP |

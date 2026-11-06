@@ -97,4 +97,30 @@ final class CommercialReports
 
         return $out;
     }
+
+    /**
+     * Commercial documents linked to a project — directly (project_id) or through its source quotation — for the
+     * document chain view (M02-02): quotations, client POs / LOAs, invoices, credit notes and the receipts
+     * allocated to those invoices.
+     *
+     * @return array{quotations: list<array<string, mixed>>, client_pos: list<array<string, mixed>>, invoices: list<array<string, mixed>>, credit_notes: list<array<string, mixed>>, receipts: list<array<string, mixed>>}
+     */
+    public function projectDocuments(int $projectId, ?int $sourceQuotationId = null): array
+    {
+        $docs = DB::table('commercial_documents')->whereNotIn('status', ['draft'])
+            ->where(fn ($q) => $q->where('project_id', $projectId)->when($sourceQuotationId !== null, fn ($w) => $w->orWhere('id', $sourceQuotationId)->orWhere('related_document_id', $sourceQuotationId)))
+            ->orderBy('issue_date')->orderBy('id')
+            ->get(['id', 'type', 'document_no', 'revision_no', 'status', 'issue_date', 'total', 'amount_received', 'amount_credited', 'external_ref', 'settlement_status']);
+        $row = fn ($d): array => ['id' => (int) $d->id, 'type' => $d->type, 'number' => $d->document_no.($d->revision_no > 0 ? ' rev '.$d->revision_no : ''), 'status' => $d->status, 'date' => (string) $d->issue_date,
+            'total' => (string) Money::fromDb((string) $d->total)->getAmount(), 'external_ref' => $d->external_ref, 'settlement_status' => $d->settlement_status,
+            'outstanding' => (string) Money::fromDb((string) $d->total)->minus(Money::fromDb((string) $d->amount_received))->minus(Money::fromDb((string) $d->amount_credited))->getAmount()];
+        $by = fn (string $t) => $docs->where('type', $t)->map($row)->values()->all();
+        $invoiceIds = $docs->where('type', 'invoice')->pluck('id')->all();
+        $receipts = $invoiceIds === [] ? [] : DB::table('receipt_allocations as a')->join('receipts as r', 'r.id', '=', 'a.receipt_id')->whereIn('a.invoice_id', $invoiceIds)
+            ->orderBy('r.receipt_date')->get(['r.id', 'r.receipt_no', 'r.receipt_date', 'r.status', 'a.amount', 'a.invoice_id', 'a.voided_at'])
+            ->map(fn ($r): array => ['id' => (int) $r->id, 'number' => $r->receipt_no, 'date' => (string) $r->receipt_date, 'status' => $r->voided_at !== null ? 'void' : $r->status,
+                'amount' => (string) Money::fromDb((string) $r->amount)->getAmount(), 'invoice_id' => (int) $r->invoice_id])->values()->all();
+
+        return ['quotations' => $by('quotation'), 'client_pos' => $by('client_po'), 'invoices' => $by('invoice'), 'credit_notes' => $by('credit_note'), 'receipts' => $receipts];
+    }
 }

@@ -169,7 +169,7 @@ final class TimesheetService
      */
     public function quantityByProject(Timesheet $t): array
     {
-        return $t->entries()->selectRaw('project_id, SUM(quantity) AS q')->groupBy('project_id')->pluck('q', 'project_id')->map(fn ($v): string => (string) $v)->all();
+        return $t->entries()->reorder()->selectRaw('project_id, SUM(quantity) AS q')->groupBy('project_id')->pluck('q', 'project_id')->map(fn ($v): string => (string) $v)->all();
     }
 
     public function hasExceptionRole(User $user): bool
@@ -186,7 +186,7 @@ final class TimesheetService
             return;
         }
         $managed = $this->projects->managedProjectIds($pm);
-        $booked = $ts->entries()->distinct()->pluck('project_id')->map(fn ($v): int => (int) $v)->all();
+        $booked = $ts->entries()->reorder()->distinct()->pluck('project_id')->map(fn ($v): int => (int) $v)->all();
         if ($booked === [] || array_diff($booked, $managed) !== []) {
             throw new HrRejected('Only the project manager of every project on this timesheet can verify it.');
         }

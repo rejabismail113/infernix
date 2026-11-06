@@ -28,7 +28,7 @@ final class CommercialReportController
         $filters = ['from' => $f['from'] ?? today()->startOfYear()->toDateString(), 'to' => $f['to'] ?? today()->toDateString()];
 
         return Inertia::render('Finance/Reports/Show', [
-            'report' => $report, 'name' => $def->name, 'data' => $def->run($filters), 'filters' => $filters + ['as_of' => null, 'basis' => null, 'account_id' => null], 'accounts' => [],
+            'report' => $report, 'name' => $def->name, 'data' => $def->run($filters, $user), 'filters' => $filters + ['as_of' => null, 'basis' => null, 'account_id' => null], 'accounts' => [],
             'canExport' => $permissions->can($user, PermissionAction::Export, $def->resource),
             'routes' => ['run' => route('commercial.reports.show', $report), 'export' => route('reports.exports.index', ['report' => 'commercial.'.$report]), 'module' => 'Commercial', 'filters' => $def->filters],
         ]);

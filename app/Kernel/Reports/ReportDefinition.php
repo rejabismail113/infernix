@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Kernel\Reports;
 
+use App\Kernel\Identity\Models\User;
 use Closure;
 
 /**
@@ -26,11 +27,13 @@ final class ReportDefinition
     ) {}
 
     /**
+     * The runner also receives the requesting user so reports can apply row-level record scope (M11-05).
+     *
      * @param  array<string, mixed>  $filters
      * @return array<string, mixed>
      */
-    public function run(array $filters): array
+    public function run(array $filters, ?User $user = null): array
     {
-        return ($this->runner)($filters);
+        return ($this->runner)($filters, $user);
     }
 }

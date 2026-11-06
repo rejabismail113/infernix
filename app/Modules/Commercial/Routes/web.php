@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 use App\Modules\Commercial\Http\Controllers\CertificateVerifyController;
+use App\Modules\Commercial\Http\Controllers\ClientPoController;
 use App\Modules\Commercial\Http\Controllers\CommercialReportController;
 use App\Modules\Commercial\Http\Controllers\DocumentController;
+use App\Modules\Commercial\Http\Controllers\GeneratedDocumentController;
 use App\Modules\Commercial\Http\Controllers\ReceiptController;
 use App\Modules\Commercial\Http\Controllers\TemplateController;
 use Illuminate\Support\Facades\Route;
@@ -16,7 +18,7 @@ use Illuminate\Support\Facades\Route;
  * @see SRS M03-01 … M03-08
  */
 Route::middleware(['web', 'app'])->prefix('commercial')->name('commercial.')->group(function (): void {
-    foreach (['quotation' => 'quotations', 'invoice' => 'invoices', 'credit_note' => 'credit-notes'] as $type => $base) {
+    foreach (['quotation' => 'quotations', 'invoice' => 'invoices', 'credit_note' => 'credit-notes', 'vendor_po' => 'vendor-pos'] as $type => $base) {
         Route::prefix($base)->name($base.'.')->group(function () use ($type): void {
             Route::get('/', [DocumentController::class, 'index'])->name('index')->defaults('docType', $type);
             if ($type !== 'credit_note') {
@@ -40,6 +42,20 @@ Route::middleware(['web', 'app'])->prefix('commercial')->name('commercial.')->gr
     Route::post('quotations/{document}/convert-invoice', [DocumentController::class, 'convertToInvoice'])->whereNumber('document')->name('quotations.convert-invoice');
     Route::post('quotations/{document}/convert-project', [DocumentController::class, 'convertToProject'])->whereNumber('document')->name('quotations.convert-project');
     Route::post('invoices/{document}/credit-note', [DocumentController::class, 'creditNote'])->whereNumber('document')->name('invoices.credit-note');
+
+    Route::get('client-pos', [ClientPoController::class, 'index'])->name('client-pos.index');
+    Route::post('client-pos', [ClientPoController::class, 'store'])->name('client-pos.store');
+
+    Route::get('generated', [GeneratedDocumentController::class, 'index'])->name('generated.index');
+    Route::get('generated/create', [GeneratedDocumentController::class, 'create'])->name('generated.create');
+    Route::post('generated', [GeneratedDocumentController::class, 'store'])->name('generated.store');
+    Route::get('generated/{document}', [GeneratedDocumentController::class, 'show'])->whereNumber('document')->name('generated.show');
+    Route::get('generated/{document}/edit', [GeneratedDocumentController::class, 'edit'])->whereNumber('document')->name('generated.edit');
+    Route::put('generated/{document}', [GeneratedDocumentController::class, 'update'])->whereNumber('document')->name('generated.update');
+    Route::delete('generated/{document}', [GeneratedDocumentController::class, 'destroy'])->whereNumber('document')->name('generated.destroy');
+    Route::post('generated/{document}/issue', [GeneratedDocumentController::class, 'issue'])->whereNumber('document')->name('generated.issue');
+    Route::post('generated/{document}/void', [GeneratedDocumentController::class, 'void'])->whereNumber('document')->name('generated.void');
+    Route::post('generated/{document}/regenerate-pdf', [GeneratedDocumentController::class, 'regenerate'])->whereNumber('document')->name('generated.regenerate');
 
     Route::get('receipts', [ReceiptController::class, 'index'])->name('receipts.index');
     Route::get('receipts/create', [ReceiptController::class, 'create'])->name('receipts.create');

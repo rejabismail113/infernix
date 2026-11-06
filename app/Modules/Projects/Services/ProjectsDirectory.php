@@ -12,6 +12,7 @@ use App\Kernel\Identity\Services\PermissionService;
 use App\Kernel\Money\Money;
 use App\Kernel\Numbering\Services\NumberingService;
 use App\Modules\Projects\Models\Lead;
+use App\Modules\Projects\Models\Milestone;
 use App\Modules\Projects\Models\Project;
 use App\Modules\Projects\Models\ProjectMember;
 use Illuminate\Support\Facades\DB;
@@ -51,7 +52,8 @@ final class ProjectsDirectory implements ProjectDirectory
     {
         $p = Project::query()->find($projectId);
 
-        return $p === null ? null : ['id' => $p->id, 'code' => $p->code, 'name' => $p->name, 'client_id' => $p->client_id, 'contract_value' => (string) $p->contract_value->getAmount()];
+        return $p === null ? null : ['id' => $p->id, 'code' => $p->code, 'name' => $p->name, 'client_id' => $p->client_id, 'contract_value' => (string) $p->contract_value->getAmount(),
+            'lead_id' => $p->lead_id, 'source_quotation_id' => $p->source_quotation_id, 'status_delivery' => $p->status_delivery, 'status_payment' => $p->status_payment, 'scope' => $p->scope];
     }
 
     public function idForQuotation(int $quotationId): ?int
@@ -113,5 +115,22 @@ final class ProjectsDirectory implements ProjectDirectory
             }
             $lead->forceFill(['quotation_id' => $quotationId, 'stage' => in_array($lead->stage, ['new', 'qualified'], true) ? 'proposal' : $lead->stage])->save();
         });
+    }
+
+    public function assignmentsForStaff(int $staffProfileId): array
+    {
+        return ProjectMember::query()->where('staff_profile_id', $staffProfileId)->orderByDesc('from_date')->get()
+            ->map(function (ProjectMember $m): array {
+                $p = Project::query()->find($m->project_id);
+
+                return ['id' => $m->project_id, 'code' => (string) $p?->code, 'name' => (string) $p?->name, 'role' => $m->role, 'from_date' => $m->from_date->toDateString(), 'to_date' => $m->to_date?->toDateString()];
+            })->values()->all();
+    }
+
+    public function milestoneSnapshot(int $milestoneId): ?array
+    {
+        $m = Milestone::query()->find($milestoneId);
+
+        return $m === null ? null : ['id' => $m->id, 'project_id' => $m->project_id, 'title' => $m->title, 'billable_amount' => $m->billable_amount !== null ? (string) $m->billable_amount->getAmount() : null, 'status' => $m->status];
     }
 }

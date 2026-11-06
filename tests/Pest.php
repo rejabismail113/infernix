@@ -20,11 +20,16 @@ use App\Modules\Finance\Models\BankAccount;
 use App\Modules\Finance\Models\ChartAccount;
 use App\Modules\Finance\Models\Transaction;
 use App\Modules\Finance\Services\TransactionService;
+use App\Modules\HumanResources\Models\StaffProfile;
+use App\Modules\HumanResources\Services\StaffService;
 use App\Modules\Projects\Models\Client;
+use App\Modules\Projects\Models\Project;
+use App\Modules\Projects\Services\ProjectService;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Support\ViewErrorBag;
 use Tests\Support\Files;
 use Tests\TestCase;
@@ -174,4 +179,28 @@ function approveFully(CommercialDocument $doc, ?User $first = null): void
     while ($fresh()->status === DocumentStatus::PendingApproval) {
         $svc->approve($fresh(), $fresh()->current_level === 1 ? ($first ?? userWithRoles('FIN')) : ownerUser());
     }
+}
+
+/** Staff profile with a rate agreement v1 (default: part-time contractor at RM 50/hour from 2026-01-01). */
+function makeStaff(?User $user = null, string $classification = 'contractor', string $rate = '50.00', string $rateType = 'hourly'): StaffProfile
+{
+    $hr = ownerUser();
+    $svc = app(StaffService::class);
+    $staff = $svc->create(['user_id' => $user?->id, 'engagement_type' => $classification === 'employee' ? 'employee' : 'part_time', 'legal_name' => 'Nur Aisyah binti Ahmad '.Str::random(4),
+        'id_type' => 'nric', 'id_number' => '900101-14-5678', 'email' => 'aisyah@example.com', 'position' => 'Trainer', 'joined_on' => '2026-01-01', 'classification' => $classification], $hr);
+    $svc->addEngagement($staff, ['rate_type' => $rateType, 'rate_amount' => $rate, 'effective_from' => '2026-01-01', 'title' => 'Agreement v1'], $hr);
+
+    return $staff->fresh();
+}
+
+/** Project with an optional PM user and team members (staff profiles) assigned from 2026-01-01. */
+function makeProject(?User $pm = null, array $members = []): Project
+{
+    $svc = app(ProjectService::class);
+    $p = $svc->create(['client_id' => makeClient()->id, 'name' => 'Programme '.Str::random(4), 'engagement_type' => 'training', 'contract_value' => '20000.00', 'pm_user_id' => $pm?->id, 'starts_on' => '2026-01-01'], ownerUser());
+    foreach ($members as $staff) {
+        $svc->addMember($p, ['staff_profile_id' => $staff->id, 'role' => 'member', 'from_date' => '2026-01-01'], ownerUser());
+    }
+
+    return $p->fresh();
 }

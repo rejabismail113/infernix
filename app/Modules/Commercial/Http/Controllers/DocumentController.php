@@ -6,6 +6,7 @@ namespace App\Modules\Commercial\Http\Controllers;
 
 use App\Kernel\Crm\Contracts\ClientDirectory;
 use App\Kernel\Crm\Contracts\ProjectDirectory;
+use App\Kernel\Crm\Contracts\VendorDirectory;
 use App\Kernel\Documents\Contracts\DocumentStore;
 use App\Kernel\Http\HandlesDomainErrors;
 use App\Kernel\Identity\Enums\PermissionAction;
@@ -43,13 +44,14 @@ final class DocumentController
     use AuthorizesRequests;
     use HandlesDomainErrors;
 
-    private const ROUTES = ['quotation' => 'quotations', 'invoice' => 'invoices', 'credit_note' => 'credit-notes'];
+    private const ROUTES = ['quotation' => 'quotations', 'invoice' => 'invoices', 'credit_note' => 'credit-notes', 'vendor_po' => 'vendor-pos'];
 
     private const SORTS = ['document_no', 'issue_date', 'due_date', 'total', 'created_at', 'status'];
 
     public function __construct(
         private readonly CommercialDocumentService $service,
         private readonly ClientDirectory $clients,
+        private readonly VendorDirectory $vendors,
         private readonly ProjectDirectory $projects,
         private readonly LedgerGateway $ledger,
         private readonly PermissionService $permissions,
@@ -93,11 +95,26 @@ final class DocumentController
         if ($project !== null) {
             $this->assertProjectVisible($user, $project['id']);
         }
+        $prefill = $project === null ? null : ['client_id' => $project['client_id'], 'project_id' => $project['id'], 'title' => $project['name'],
+            'lines' => [['description' => $project['name'], 'quantity' => '1', 'unit' => 'lot', 'unit_price' => $project['contract_value'], 'discount' => '0.00']]];
+        // Invoice a milestone (M03-03): one line for its billable amount, linked to the milestone.
+        $milestone = $type === DocumentType::Invoice && $request->integer('milestone_id') ? $this->projects->milestoneSnapshot($request->integer('milestone_id')) : null;
+        if ($milestone !== null) {
+            $this->assertProjectVisible($user, $milestone['project_id']);
+            $mp = $this->projects->snapshot($milestone['project_id']);
+            $prefill = ['client_id' => $mp['client_id'] ?? null, 'project_id' => $milestone['project_id'], 'title' => ($mp['name'] ?? '').' — '.$milestone['title'],
+                'lines' => [['description' => 'Milestone: '.$milestone['title'], 'quantity' => '1', 'unit' => 'milestone', 'unit_price' => $milestone['billable_amount'] ?? '0.00', 'discount' => '0.00', 'milestone_id' => $milestone['id']]]];
+        }
+        // Quotation for a lead (M02-02): client and value carried over, link recorded on save.
+        $lead = $type === DocumentType::Quotation && $request->integer('lead_id') ? $this->projects->leadSnapshot($request->integer('lead_id')) : null;
+        if ($lead !== null) {
+            $prefill = ['client_id' => $lead['client_id'], 'project_id' => null, 'title' => $lead['title'], 'lead_id' => $lead['id'],
+                'lines' => [['description' => $lead['title'], 'quantity' => '1', 'unit' => 'lot', 'unit_price' => $lead['estimated_value'], 'discount' => '0.00']]];
+        }
 
         return Inertia::render('Commercial/Documents/Form', [
             'type' => $type->value, 'label' => $type->label(), 'routeBase' => self::ROUTES[$type->value], 'document' => null,
-            'prefill' => $project === null ? null : ['client_id' => $project['client_id'], 'project_id' => $project['id'], 'title' => $project['name'],
-                'lines' => [['description' => $project['name'], 'quantity' => '1', 'unit' => 'lot', 'unit_price' => $project['contract_value'], 'discount' => '0.00']]],
+            'prefill' => $prefill,
             ...$this->options($type, $user),
         ]);
     }
@@ -370,12 +387,15 @@ final class DocumentController
         return $u;
     }
 
-    /** @return array{client_id?: int|null, project_id?: int|null, title?: string|null, terms?: string|null, internal_notes?: string|null, valid_until?: string|null, due_date?: string|null, lines: list<array<string, mixed>>} */
+    /** @return array{client_id?: int|null, project_id?: int|null, title?: string|null, terms?: string|null, internal_notes?: string|null, valid_until?: string|null, due_date?: string|null, lines: list<array<string, mixed>>, vendor_id?: int|null, lead_id?: int|null} */
     private function validated(Request $request, DocumentType $type): array
     {
-        /** @var array{client_id?: int|null, project_id?: int|null, title?: string|null, terms?: string|null, internal_notes?: string|null, valid_until?: string|null, due_date?: string|null, lines: list<array<string, mixed>>} $data */
+        /** @var array{client_id?: int|null, project_id?: int|null, title?: string|null, terms?: string|null, internal_notes?: string|null, valid_until?: string|null, due_date?: string|null, lines: list<array<string, mixed>>, vendor_id?: int|null, lead_id?: int|null} $data */
         $data = $request->validate([
-            'client_id' => [$type === DocumentType::CreditNote ? 'nullable' : 'required', 'integer', 'exists:clients,id'],
+            'client_id' => [in_array($type, [DocumentType::CreditNote, DocumentType::VendorPo], true) ? 'nullable' : 'required', 'integer', 'exists:clients,id'],
+            'vendor_id' => [$type === DocumentType::VendorPo ? 'required' : 'prohibited', 'integer', 'exists:vendors,id'],
+            'lead_id' => [$type === DocumentType::Quotation ? 'nullable' : 'prohibited', 'integer', 'exists:leads,id'],
+            'lines.*.milestone_id' => ['nullable', 'integer', 'exists:milestones,id'],
             'project_id' => ['nullable', 'integer', 'exists:projects,id'],
             'title' => ['nullable', 'string', 'max:190'], 'terms' => ['nullable', 'string', 'max:4000'], 'internal_notes' => ['nullable', 'string', 'max:4000'],
             'valid_until' => ['nullable', 'date'], 'due_date' => ['nullable', 'date'],
@@ -398,12 +418,13 @@ final class DocumentController
     private function options(DocumentType $type, User $user): array
     {
         return [
-            'clients' => $this->clients->options($user),
+            'clients' => $type === DocumentType::VendorPo ? [] : $this->clients->options($user),
+            'vendors' => $type === DocumentType::VendorPo ? $this->vendors->options($user) : [],
             'projects' => $this->projects->options($user),
             'taxCodes' => DictionaryItem::query()->whereRelation('dictionary', 'code', 'tax_code')->where('active', true)->orderBy('sort_order')->get()
                 ->map(fn (DictionaryItem $i): array => ['id' => $i->id, 'label' => $i->label_en, 'rate' => (string) ($i->meta['rate'] ?? '0')])->values()->all(),
-            'revenueAccounts' => $type === DocumentType::Quotation ? [] : $this->ledger->revenueAccountOptions(),
-            'defaultRevenueAccountId' => $type === DocumentType::Quotation ? null : $this->ledger->defaultRevenueAccountId(),
+            'revenueAccounts' => in_array($type, [DocumentType::Quotation, DocumentType::VendorPo], true) ? [] : $this->ledger->revenueAccountOptions(),
+            'defaultRevenueAccountId' => in_array($type, [DocumentType::Quotation, DocumentType::VendorPo], true) ? null : $this->ledger->defaultRevenueAccountId(),
             'canCreateClient' => $this->permissions->can($user, PermissionAction::Create, 'clients'),
         ];
     }

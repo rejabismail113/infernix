@@ -43,7 +43,7 @@ final class ExportService
             throw new AuthorizationException('You may not export this report.');
         }
         $filters = array_intersect_key($filters, array_flip($report->filters));
-        $data = $report->run($filters);
+        $data = $report->run($filters, $user);
         $keys = array_map(fn (array $c): string => $c['key'], $data['columns']);
         $rows = array_map(fn (array $r): array => array_map(fn (string $k) => is_scalar($r[$k] ?? null) ? (is_int($r[$k]) ? $r[$k] : (string) $r[$k]) : null, $keys), $data['rows']);
         foreach ($data['totals'] as $k => $v) {

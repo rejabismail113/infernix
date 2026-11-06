@@ -12,6 +12,8 @@ use App\Kernel\Identity\Models\User;
 use App\Kernel\Identity\Services\PermissionService;
 use App\Kernel\Notifications\PendingApprovalRegistry;
 use App\Kernel\People\Contracts\StaffDirectory;
+use App\Kernel\Reports\ReportCatalog;
+use App\Kernel\Reports\ReportDefinition;
 use App\Modules\Commercial\Events\DocumentIssued;
 use App\Modules\HumanResources\Listeners\DeliverMemoToInbox;
 use App\Modules\HumanResources\Models\Engagement;
@@ -25,7 +27,9 @@ use App\Modules\HumanResources\Policies\PaymentBatchPolicy;
 use App\Modules\HumanResources\Policies\StaffBankDetailPolicy;
 use App\Modules\HumanResources\Policies\StaffProfilePolicy;
 use App\Modules\HumanResources\Policies\TimesheetPolicy;
+use App\Modules\HumanResources\Reports\HrReports;
 use App\Modules\HumanResources\Services\StaffDirectoryService;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -60,6 +64,12 @@ final class HumanResourcesServiceProvider extends ServiceProvider
         Gate::define('edit-staff-bank', fn (User $u): bool => $can($u, PermissionAction::Edit, 'staff_bank'));
 
         Event::listen(DocumentIssued::class, DeliverMemoToInbox::class);
+
+        $catalog = $this->app->make(ReportCatalog::class);
+        $range = fn (array $f): array => [Carbon::parse($f['from'] ?? today()->startOfYear()->toDateString()), Carbon::parse($f['to'] ?? today()->toDateString())];
+        $catalog->register(new ReportDefinition('hr.roster', 'Staff roster', 'HR', 'staff_profiles', fn (array $f): array => app(HrReports::class)->roster(), []));
+        $catalog->register(new ReportDefinition('hr.timesheet-summary', 'Timesheet summary', 'HR', 'timesheets', fn (array $f, ?User $u = null): array => app(HrReports::class)->timesheetSummary(...[...$range($f), $u])));
+        $catalog->register(new ReportDefinition('hr.payment-history', 'Part-time payment history', 'HR', 'payment_batches', fn (array $f): array => app(HrReports::class)->paymentHistory(...$range($f))));
 
         $registry = $this->app->make(DocumentLinkRegistry::class);
         $registry->register(new LinkableEntityType('staff_profile', StaffProfile::class, 'Staff profile', ['contract', 'nda', 'agreement', 'certificate', 'memo', 'appointment', 'evidence', 'attachment', 'other'],

@@ -516,7 +516,7 @@ final class CommercialDocumentService
                 'discount' => Money::myr((string) (($l['discount'] ?? '') === '' ? '0' : $l['discount'])), 'tax_code_id' => $taxCodeId, 'tax_rate' => $rate,
                 'net_amount' => $math['net'], 'tax_amount' => $math['tax'], 'line_total' => $math['total'],
                 'revenue_account_id' => isset($l['revenue_account_id']) && $l['revenue_account_id'] !== '' ? (int) $l['revenue_account_id'] : null,
-                'source_line_id' => $l['source_line_id'] ?? null,
+                'source_line_id' => $l['source_line_id'] ?? null, 'milestone_id' => isset($l['milestone_id']) && $l['milestone_id'] !== '' ? (int) $l['milestone_id'] : null,
             ]);
             $subtotal = $subtotal->plus($math['net']);
             $discount = $discount->plus($math['gross']->minus($math['net']));
@@ -531,7 +531,7 @@ final class CommercialDocumentService
         return [
             'description' => $l->description, 'quantity' => $l->quantity, 'unit' => $l->unit, 'unit_price' => (string) $l->unit_price->getAmount(),
             'discount' => (string) $l->discount->getAmount(), 'tax_code_id' => $l->tax_code_id, 'revenue_account_id' => $l->revenue_account_id,
-            'source_line_id' => $keepSource ? $l->id : $l->source_line_id,
+            'source_line_id' => $keepSource ? $l->id : $l->source_line_id, 'milestone_id' => $l->milestone_id,
         ];
     }
 

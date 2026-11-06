@@ -40,7 +40,8 @@ final class CommercialPresenter
         $project = $d->project_id !== null ? app(ProjectDirectory::class)->snapshot($d->project_id) : null;
 
         return self::row($d) + [
-            'client_id' => $d->client_id, 'counterparty' => $d->counterparty_snapshot, 'project' => $project,
+            'client_id' => $d->client_id, 'counterparty_id' => $d->counterparty_id, 'counterparty_type' => $d->counterparty_type, 'counterparty' => $d->counterparty_snapshot,
+            'external_ref' => $d->external_ref, 'subject' => $d->subject, 'body' => $d->body, 'effective_date' => $d->effective_date?->toDateString(), 'project' => $project,
             'project_id' => $d->project_id, 'terms' => $d->terms,
             'internal_notes' => $viewer->can('update', $d) ? $d->internal_notes : null,
             'subtotal' => self::m($d->subtotal), 'discount_total' => self::m($d->discount_total), 'tax_total' => self::m($d->tax_total),
@@ -61,7 +62,7 @@ final class CommercialPresenter
             'id' => $l->id, 'line_no' => $l->line_no, 'description' => $l->description, 'quantity' => rtrim(rtrim((string) $l->quantity, '0'), '.'), 'unit' => $l->unit,
             'unit_price' => self::m($l->unit_price), 'discount' => self::m($l->discount), 'tax_code_id' => $l->tax_code_id, 'tax_rate' => (string) $l->tax_rate,
             'net_amount' => self::m($l->net_amount), 'tax_amount' => self::m($l->tax_amount), 'line_total' => self::m($l->line_total),
-            'revenue_account_id' => $l->revenue_account_id, 'source_line_id' => $l->source_line_id,
+            'revenue_account_id' => $l->revenue_account_id, 'source_line_id' => $l->source_line_id, 'milestone_id' => $l->milestone_id,
         ];
     }
 

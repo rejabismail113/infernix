@@ -9,6 +9,7 @@ use App\Kernel\Identity\Contracts\PermissionResource;
 use App\Kernel\Identity\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 /**
  * Restricted bank record (M04-06): every field encrypted; shown masked; full number only on an audited reveal
@@ -23,6 +24,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $account_name
  * @property string $account_last4
  * @property int $updated_by
+ * @property Carbon|null $updated_at
  * @property-read StaffProfile $staff
  */
 final class StaffBankDetail extends Model implements PermissionResource

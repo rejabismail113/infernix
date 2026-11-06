@@ -25,14 +25,15 @@ it('sends a grouped, icon-tagged sidebar that differs by role (server-side filte
     $navFor = fn (string $role) => collect(actingAsSatisfied(userWithRoles($role))->get('/')->assertOk()->viewData('page')['props']['nav']);
 
     $own = $navFor('OWN');
-    expect($own->pluck('group')->unique()->values()->all())->toBe(['Overview', 'Sales', 'Finance', 'Procurement', 'Reports', 'Documents', 'Administration'])
+    expect($own->pluck('group')->unique()->values()->all())->toBe(['Overview', 'Sales', 'Projects', 'Finance', 'Procurement', 'People', 'Reports', 'Documents', 'Administration'])
         ->and($own->every(fn (array $i): bool => $i['icon'] !== ''))->toBeTrue()
         ->and($own->pluck('label')->all())->toContain('Audit log', 'Permissions', 'Documents');
 
     $stf = $navFor('STF');
     expect($stf->pluck('label')->all())->toContain('Dashboard', 'Documents', 'Users', 'Claims')
         ->not->toContain('Bills', 'Payments', 'Journals', 'Finance reports')
-        ->not->toContain('Owner dashboard', 'Finance dashboard', 'Quotations', 'Invoices', 'Receipts', 'Export Centre')
+        ->toContain('Timesheets', 'My memos')
+        ->not->toContain('Owner dashboard', 'Finance dashboard', 'Quotations', 'Invoices', 'Receipts', 'Export Centre', 'Payment batches', 'Leads')
         ->not->toContain('Audit log', 'Permissions', 'Numbering', 'Fiscal periods');
     // …and the hidden entries are still enforced by the routes themselves.
     foreach (['admin.audit-log.index', 'admin.permissions.index', 'admin.numbering.index', 'admin.fiscal-periods.index'] as $route) {

@@ -106,7 +106,8 @@ it('Export Centre refuses reports the user may not export and unknown reports', 
     actingAsSatisfied(userWithRoles('STF'))->post(route('reports.exports.store'), ['report' => 'finance.trial-balance', 'format' => 'csv'])->assertForbidden();
     actingAsSatisfied(userWithRoles('PM'))->post(route('reports.exports.store'), ['report' => 'finance.trial-balance', 'format' => 'csv'])->assertForbidden();
     actingAsSatisfied(userWithRoles('FIN'))->post(route('reports.exports.store'), ['report' => 'nope.nothing', 'format' => 'csv'])->assertNotFound();
-    actingAsSatisfied(userWithRoles('PM'))->get(route('reports.exports.index'))->assertForbidden(); // PM may export nothing yet
+    $pmReports = collect(actingAsSatisfied(userWithRoles('PM'))->get(route('reports.exports.index'))->assertOk()->viewData('page')['props']['reports'])->pluck('key');
+    expect($pmReports->all())->toContain('projects.pipeline', 'projects.contribution')->and($pmReports->filter(fn ($k) => str_starts_with($k, 'finance.'))->all())->toBe([]);
     $aud = actingAsSatisfied(userWithRoles('AUD'))->get(route('reports.exports.index'))->assertOk();
     expect(collect($aud->viewData('page')['props']['reports'])->pluck('key')->all())->toContain('finance.trial-balance', 'commercial.invoice-register');
 })->group('M11-05', 'NFR-02');

@@ -295,6 +295,25 @@ final class FinanceReports
         return $rows;
     }
 
+    /**
+     * Posted revenue and direct costs of a project from the ledger (lines tagged with the project), by source.
+     *
+     * @return list<array{journal_id: int, journal_no: string, date: string, source_type: string, source_id: int|null, account: string, type: string, amount: string, description: string|null}>
+     */
+    public function projectLines(int $projectId): array
+    {
+        return DB::table('journal_lines as l')->join('journals as j', 'j.id', '=', 'l.journal_id')->join('chart_accounts as a', 'a.id', '=', 'l.account_id')
+            ->where('l.project_id', $projectId)->where('j.status', '!=', 'draft')->whereIn('a.type', ['income', 'expense'])
+            ->orderBy('j.posting_date')->orderBy('l.id')
+            ->get(['j.id as journal_id', 'j.journal_no', 'j.posting_date', 'j.source_type', 'j.source_id', 'a.code', 'a.name', 'a.type', 'l.debit', 'l.credit', 'l.description'])
+            ->map(function ($r): array {
+                $amount = $r->type === 'income' ? Money::fromDb((string) $r->credit)->minus(Money::fromDb((string) $r->debit)) : Money::fromDb((string) $r->debit)->minus(Money::fromDb((string) $r->credit));
+
+                return ['journal_id' => (int) $r->journal_id, 'journal_no' => (string) $r->journal_no, 'date' => (string) $r->posting_date, 'source_type' => (string) $r->source_type,
+                    'source_id' => $r->source_id === null ? null : (int) $r->source_id, 'account' => "{$r->code} {$r->name}", 'type' => (string) $r->type, 'amount' => (string) $amount->getAmount(), 'description' => $r->description];
+            })->all();
+    }
+
     /** Report key → data (shared by the Finance report pages and the Export Centre catalog). */
     /**
      * @param  array{from?: string|null, to?: string|null, as_of?: string|null, basis?: string|null, account_id?: int|string|null}  $f

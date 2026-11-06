@@ -9,6 +9,8 @@ use App\Kernel\Crm\Contracts\ProjectDirectory;
 use App\Kernel\Documents\DocumentLinkRegistry;
 use App\Kernel\Documents\LinkableEntityType;
 use App\Kernel\Identity\Models\User;
+use App\Kernel\Reports\ReportCatalog;
+use App\Kernel\Reports\ReportDefinition;
 use App\Modules\Commercial\Events\ProjectBillingChanged;
 use App\Modules\Projects\Listeners\UpdateProjectPaymentStatus;
 use App\Modules\Projects\Models\Client;
@@ -17,8 +19,10 @@ use App\Modules\Projects\Models\Project;
 use App\Modules\Projects\Policies\ClientPolicy;
 use App\Modules\Projects\Policies\LeadPolicy;
 use App\Modules\Projects\Policies\ProjectPolicy;
+use App\Modules\Projects\Reports\ProjectsReports;
 use App\Modules\Projects\Services\ClientsDirectory;
 use App\Modules\Projects\Services\ProjectsDirectory;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -47,6 +51,12 @@ final class ProjectsServiceProvider extends ServiceProvider
         Gate::policy(Project::class, ProjectPolicy::class);
         Gate::policy(Lead::class, LeadPolicy::class);
         Event::listen(ProjectBillingChanged::class, UpdateProjectPaymentStatus::class);
+
+        $catalog = $this->app->make(ReportCatalog::class);
+        $range = fn (array $f): array => [Carbon::parse($f['from'] ?? today()->startOfYear()->toDateString()), Carbon::parse($f['to'] ?? today()->toDateString())];
+        $catalog->register(new ReportDefinition('projects.pipeline', 'Project pipeline', 'Projects', 'leads', fn (array $f, ?User $u = null): array => app(ProjectsReports::class)->pipeline($u), []));
+        $catalog->register(new ReportDefinition('projects.overdue-milestones', 'Overdue milestones', 'Projects', 'projects', fn (array $f, ?User $u = null): array => app(ProjectsReports::class)->overdueMilestones($u, Carbon::parse($f['as_of'] ?? today()->toDateString())), ['as_of']));
+        $catalog->register(new ReportDefinition('projects.training-register', 'Training register', 'Projects', 'projects', fn (array $f, ?User $u = null): array => app(ProjectsReports::class)->trainingRegister($u, ...$range($f))));
 
         $registry = $this->app->make(DocumentLinkRegistry::class);
         $registry->register(new LinkableEntityType('client', Client::class, 'Client', ['client_po', 'contract', 'evidence', 'attachment'], labelFor: fn (Client $c): string => $c->name));

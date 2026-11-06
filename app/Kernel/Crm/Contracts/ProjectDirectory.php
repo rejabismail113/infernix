@@ -19,7 +19,7 @@ interface ProjectDirectory
      */
     public function createFromQuotation(array $data, User $actor): int;
 
-    /** @return array{id: int, code: string, name: string, client_id: int, contract_value: string}|null */
+    /** @return array{id: int, code: string, name: string, client_id: int, contract_value: string, lead_id: int|null, source_quotation_id: int|null, status_delivery: string, status_payment: string, scope: string|null}|null */
     public function snapshot(int $projectId): ?array;
 
     public function idForQuotation(int $quotationId): ?int;
@@ -41,4 +41,10 @@ interface ProjectDirectory
 
     /** Record that a quotation was raised for a lead (lead → quotation link, M02-02); moves the lead to "proposal". */
     public function attachQuotationToLead(int $leadId, int $quotationId, User $actor): void;
+
+    /** @return list<array{id: int, code: string, name: string, role: string, from_date: string, to_date: string|null}> a staff member's project assignments */
+    public function assignmentsForStaff(int $staffProfileId): array;
+
+    /** @return array{id: int, project_id: int, title: string, billable_amount: string|null, status: string}|null milestone to invoice (M03-03) */
+    public function milestoneSnapshot(int $milestoneId): ?array;
 }

@@ -18,6 +18,10 @@ Mailpit: <http://localhost:8025> · Object store console (RustFS): <http://local
 Seeded Owner login: `owner@infernix.local` / `ChangeMe-Infernix-2026!` (from `SEED_OWNER_*` in `.env`;
 change before any shared deployment).
 
+**After every `git pull`** run `make update` — it installs new PHP / JS packages (the `vite` container otherwise
+keeps its old `node_modules`, e.g. "Failed to resolve import chart.js"), runs new migrations, adds new permissions
+and restarts the workers.
+
 ## Quality gates
 
 `make lint` (Pint, Larastan L6, ESLint, vue-tsc) and `make test` (Pest on PostgreSQL, Vitest) must be green

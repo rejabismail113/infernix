@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Reporting\Http\Controllers\CatalogReportController;
 use App\Modules\Reporting\Http\Controllers\DashboardController;
 use App\Modules\Reporting\Http\Controllers\ExportController;
+use App\Modules\Reporting\Http\Controllers\ProjectDashboardController;
 use App\Modules\Reporting\Http\Controllers\ProjectFinancialsController;
 use App\Modules\Reporting\Http\Controllers\ReportIndexController;
 use Illuminate\Support\Facades\Route;
@@ -22,4 +23,7 @@ Route::middleware(['web', 'app'])->prefix('reports')->name('reports.')->group(fu
     Route::get('view/{key}', CatalogReportController::class)->where('key', '[a-z0-9.\-]+')->name('view');
     Route::get('exports', [ExportController::class, 'index'])->name('exports.index');
     Route::post('exports', [ExportController::class, 'store'])->middleware('throttle:20,1')->name('exports.store');
+    Route::post('schedules', [ExportController::class, 'storeSchedule'])->name('schedules.store');
+    Route::post('schedules/{schedule}/toggle', [ExportController::class, 'toggleSchedule'])->name('schedules.toggle');
+    Route::get('projects', ProjectDashboardController::class)->name('projects.dashboard');
 });

@@ -283,7 +283,7 @@ final class BankService
         }
         $needle = $captured ?? $rule?->ledger_keyword;
 
-        return $this->suggestions($txn, $rule?->date_window_days ?? 3)
+        return $this->suggestions($txn, $rule === null ? 3 : $rule->date_window_days)
             ->filter(fn (JournalLine $l): bool => $needle === null || str_contains(mb_strtolower(($l->description ?? '').' '.($l->journal->memo ?? '').' '.$l->journal->journal_no), mb_strtolower($needle)))->values();
     }
 

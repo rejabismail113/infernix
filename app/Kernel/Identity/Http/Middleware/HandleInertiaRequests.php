@@ -54,6 +54,7 @@ final class HandleInertiaRequests extends Middleware
             ['Timesheets', 'hr.timesheets.index', 'timesheets', 'view', 'People', 'calendar'],
             ['Payment batches', 'hr.batches.index', 'payment_batches', 'view', 'People', 'upload'],
             ['My memos', 'hr.memos.index', 'memos', 'view', 'People', 'bell'],
+            ['Project dashboard', 'reports.projects.dashboard', 'projects', 'view', 'Reports', 'chart'],
             ['All reports', 'reports.index', 'projects', 'view', 'Reports', 'report'],
             ['Export Centre', 'reports.exports.index', 'exports', 'create', 'Reports', 'download'],
             ['Documents', 'documents.index', 'documents', 'view', 'Documents', 'document'],

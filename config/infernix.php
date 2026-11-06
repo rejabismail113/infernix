@@ -29,6 +29,9 @@ return [
     'secret_sentinel' => env('SECRET_SENTINEL', 'SENTINEL-DO-NOT-LEAK-9f3a7c1e'),
 
     // Seeded Owner login (dev/test). Production must override SEED_OWNER_PASSWORD.
+    // Shared password of the dev / UAT demo users (UatDemoSeeder refuses production).
+    'seed_demo_password' => env('SEED_DEMO_PASSWORD', 'Demo-Infernix-2026!'),
+
     'seed_owner' => [
         'name' => env('SEED_OWNER_NAME', 'Julaiha'),
         'email' => env('SEED_OWNER_EMAIL', 'owner@infernix.local'),

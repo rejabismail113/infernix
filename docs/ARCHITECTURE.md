@@ -153,7 +153,21 @@ Implemented in Prompt 3: `DocumentIssued`, `DocumentVoided`, `QuotationConverted
   `SecretRedactor`; the dev sentinel test (UAT-08) sweeps them.
 - **Jobs**: Horizon queues `default`, `notifications`, `pdf`, `exports`, `imports`; scheduler for overdue
   invoices, renewal reminders (90/60/30), backups, rotation reminders.
-- **Observability**: request ID on every log line, JSON logs, Sentry/OTel hooks (P4), `/up` health endpoint.
+- **Secrets at rest**: `ScrubSecretsOnSave` (global `eloquent.saving` listener) stores any secret-looking free text
+  as `[SECRET-REDACTED]`; `SecretSentinelSweepTest` searches every DB row, file, log and mail (A-94, A-95).
+- **Company-wide gates** use `PermissionService::canOnAll()` (an `all` grant); `can()` with a bare resource name only
+  answers "may open the page" (A-93).
+- **Observability**: `AssignRequestId` (UUID `X-Request-Id`, echoed, on every log line and audit row), JSON log
+  channel, `ErrorReporter` Sentry hook (`SENTRY_DSN`), `/health/live` + `/health/ready` (DB, Redis, storage).
+- **HTTP hardening**: `SecurityHeaders` (CSP with a per-request nonce shared with Vite and Ziggy, XFO DENY, nosniff,
+  Referrer-Policy, Permissions-Policy, COOP, HSTS in production, `no-store` when signed in); encrypted 60-minute
+  sessions; throttles on login, MFA, reveal, exports and imports.
+- **Integration**: `EInvoiceGateway` (stub) behind `features.myinvois`, fed by the `einvoice_outbox` (A-82); read-only
+  `reporting` schema for Power BI (A-83).
+- **Operations**: `BackupService` (encrypted pg_dump, retention, restore test), `perf:benchmark`, `import:csv`,
+  `api:openapi`, `backup:run`; Horizon is restricted to the Owner (A-91).
+- **Security suite**: `tests/Feature/Security` — route × role matrix generated from / checked against
+  docs/PERMISSION_MATRIX.md, IDOR check, sentinel sweep (A-92).
 
 ## 6. Frontend structure
 

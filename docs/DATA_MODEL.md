@@ -1351,6 +1351,26 @@ erDiagram
     }
 ```
 
-Schema `reporting` (P4): read-only views (`v_pnl`, `v_trial_balance`, `v_receivables_ageing`,
-`v_project_margin`, `v_expenses_by_category`, `v_claim_outstanding`, `v_asset_register`,
-`v_credential_renewal`), no PII/secret columns, dedicated DB role with SELECT only.
+Schema `reporting` (P4, `2026_01_08_000002`): read-only views `revenue_vs_cash`, `project_margin`,
+`outstanding_receivables`, `expenses_by_category`, `claims_outstanding`, `asset_register`,
+`tax_pack_journal_lines`, `credential_renewal` — no NRIC / bank / MFA / clinical / credential-reference / audit
+JSON columns; NOLOGIN role `infernix_reporting_read` has SELECT on these views only (docs/POWER_BI.md).
+
+## 11. Prompt 6 (P4) additions
+
+| Table | Purpose | Key rules |
+|---|---|---|
+| `bank_import_profiles` (+ `template_key`, `bank_name`, `delimiter`, `skip_rows`) | per-bank CSV layout | seeded generic / maybank / cimb (PLACEHOLDER) |
+| `bank_match_rules` | auto-match rules: priority, direction, amount and date windows, description / reference regex | only a unique candidate is matched |
+| `bank_matches` (+ `match_group`, `rule_id`; UNIQUE bank_transaction_id + journal_line_id) | N:M matching | trigger `bank_matches_ceiling`: matched sum ≤ absolute amount on both sides; bank status `partial` |
+| `report_schedules` | scheduled report emails (report_key, format, frequency, day, recipient_ids, active, last_run_at) | executed as each recipient; link only |
+| `einvoice_outbox` | MyInvois submission queue (invoice_id UNIQUE, idempotency_key UNIQUE, gateway, payload, status, attempts, next_attempt_at, submitted_at, accepted_at, external_uuid, long_id, last_error) | `FOR UPDATE SKIP LOCKED`; backoff |
+| `einvoice_events` | append-only gateway event log (outbox_id, event, detail) | trigger blocks UPDATE / DELETE |
+| `backup_runs` | backup / restore-test / prune history (kind, status, object_key, size_bytes, details, source_run_id, pruned, triggered_by, started_at, finished_at, error) | shown on Admin → Backups |
+| `users.locale` CHECK (`en`,`ms`) | BM / EN preference | `SetLocale` middleware |
+| `credential_entitlements.vault_sync` widened to varchar(20) | `not_applicable` fits (`2026_01_08_000008`) | |
+| `approval_matrices` / `approval_matrix_rules` (unchanged schema) | now edited in the UI by publishing version n+1 | old versions closed via `effective_to`, never edited |
+| indexes `2026_01_08_000006` | hot list / report paths for the 50k-row benchmark | docs/PERFORMANCE.md |
+
+`search_index` now also holds `project`, `client`, `staff` (staff no, name, position — never identity or bank
+data), `quotation`, `invoice`, `credit_note`, `vendor_po`; every hit is re-checked against the record policy.

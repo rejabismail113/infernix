@@ -6,7 +6,7 @@ APP   := $(DC) exec -T app
 # One-off container: works before vendor/ exists (the long-running app container needs vendor/ to start).
 RUN   := $(DC) run --rm --no-deps -T app
 
-.PHONY: help up down setup fresh seed migrate test test-php test-js lint lint-php lint-js stan pint fix ci logs shell backup restore-test bench
+.PHONY: help up down setup fresh seed migrate test test-php test-js lint lint-php lint-js stan pint fix ci logs shell backup restore-test bench demo uat-screens openapi
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -83,3 +83,12 @@ restore-test: ## Restore the newest backup into a scratch DB and verify it (NFR-
 
 bench: ## Seed a 50k-row dataset and measure p95 of common list/detail pages (NFR-05)
 	docker compose exec -T app php artisan perf:benchmark --rows=50000
+
+demo: ## Seed the UAT walk-through scenarios (dev / UAT only; users demo.*@infernix.local)
+	docker compose exec -T app php artisan db:seed --class=UatDemoSeeder
+
+uat-screens: ## Capture docs/uat/*.png evidence screenshots (needs `make demo` and the app running)
+	node scripts/uat-screenshots.cjs http://localhost:8010
+
+openapi: ## Regenerate docs/openapi.json from the routes + permission matrix
+	docker compose exec -T app php artisan api:openapi

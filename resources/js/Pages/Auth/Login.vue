@@ -1,9 +1,14 @@
 <script setup lang="ts">
+/**
+ * Sign-in page (G-01). Frosted card over orange waves, per the Infernix Workspace design. Behaviour is unchanged:
+ * email + password, remember me, forgot password; MFA follows on the next screen for privileged roles.
+ */
 import { Head, Link, useForm } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import Flash from '@/Components/Feedback/FlashBanner.vue';
-import GuestLayout from '@/Layouts/GuestLayout.vue';
 
-const form = useForm({ email: '', password: '', remember: false });
+const form = useForm({ email: '', password: '', remember: false }); // unticked by default: shared office computers
+const showPassword = ref(false);
 
 function submit() {
     form.post(route('login'), { onFinish: () => form.reset('password') });
@@ -11,76 +16,257 @@ function submit() {
 </script>
 
 <template>
-    <GuestLayout>
-        <Head title="Log in" />
-        <h1 class="mb-6 text-xl font-semibold">
-            Sign in
-        </h1>
-        <Flash />
-        <form
-            class="space-y-4"
-            @submit.prevent="submit"
+    <Head title="Sign in" />
+    <main class="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#f4f4f7] px-4 py-10">
+        <!-- Decorative orange waves (pure SVG; no external assets) -->
+        <svg
+            class="pointer-events-none absolute inset-0 h-full w-full"
+            viewBox="0 0 1280 960"
+            preserveAspectRatio="xMidYMid slice"
+            aria-hidden="true"
         >
-            <div>
-                <label
-                    for="email"
-                    class="mb-1 block text-sm font-medium"
-                >Email</label>
-                <input
-                    id="email"
-                    v-model="form.email"
-                    type="email"
-                    autocomplete="username"
-                    required
-                    autofocus
-                    class="w-full rounded-md border border-surface-300 px-3 py-2"
-                    :aria-invalid="Boolean(form.errors.email)"
-                    aria-describedby="email-error"
+            <defs>
+                <linearGradient
+                    id="wave-a"
+                    x1="0"
+                    y1="0"
+                    x2="1"
+                    y2="1"
                 >
-                <p
-                    v-if="form.errors.email"
-                    id="email-error"
-                    class="mt-1 text-sm text-red-600"
-                    role="alert"
+                    <stop
+                        offset="0"
+                        stop-color="#FF8A00"
+                    />
+                    <stop
+                        offset="1"
+                        stop-color="#FFB347"
+                        stop-opacity="0.35"
+                    />
+                </linearGradient>
+                <linearGradient
+                    id="wave-b"
+                    x1="1"
+                    y1="1"
+                    x2="0"
+                    y2="0"
                 >
-                    {{ form.errors.email }}
-                </p>
-            </div>
-            <div>
-                <label
-                    for="password"
-                    class="mb-1 block text-sm font-medium"
-                >Password</label>
-                <input
-                    id="password"
-                    v-model="form.password"
-                    type="password"
-                    autocomplete="current-password"
-                    required
-                    class="w-full rounded-md border border-surface-300 px-3 py-2"
-                >
-            </div>
-            <label class="flex items-center gap-2 text-sm">
-                <input
-                    v-model="form.remember"
-                    type="checkbox"
-                    class="rounded border-surface-300 text-brand-600"
-                >
-                Remember me
-            </label>
-            <button
-                type="submit"
-                :disabled="form.processing"
-                class="w-full rounded-md bg-brand-600 px-4 py-2 font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+                    <stop
+                        offset="0"
+                        stop-color="#FF7A00"
+                    />
+                    <stop
+                        offset="1"
+                        stop-color="#FFC27A"
+                        stop-opacity="0.25"
+                    />
+                </linearGradient>
+                <filter id="wave-blur">
+                    <feGaussianBlur stdDeviation="6" />
+                </filter>
+            </defs>
+            <path
+                d="M-60 330 C 120 200, 160 40, 420 -40 L -60 -40 Z"
+                fill="url(#wave-a)"
+                opacity="0.9"
+            />
+            <path
+                d="M-60 470 C 140 330, 260 120, 520 -40 L 470 -40 C 230 110, 110 290, -60 400 Z"
+                fill="url(#wave-a)"
+                opacity="0.45"
+                filter="url(#wave-blur)"
+            />
+            <path
+                d="M-60 560 C 200 420, 330 200, 640 -40"
+                fill="none"
+                stroke="#FFFFFF"
+                stroke-width="2"
+                opacity="0.6"
+            />
+            <path
+                d="M1340 620 C 1140 700, 1020 840, 900 1000 L 1340 1000 Z"
+                fill="url(#wave-b)"
+                opacity="0.9"
+            />
+            <path
+                d="M1340 480 C 1100 600, 920 800, 760 1000 L 860 1000 C 1000 820, 1160 660, 1340 560 Z"
+                fill="url(#wave-b)"
+                opacity="0.5"
+                filter="url(#wave-blur)"
+            />
+            <path
+                d="M200 1000 C 420 860, 620 900, 860 1000 Z"
+                fill="url(#wave-b)"
+                opacity="0.35"
+            />
+            <path
+                d="M1340 400 C 1080 560, 900 760, 700 1000"
+                fill="none"
+                stroke="#FFFFFF"
+                stroke-width="2"
+                opacity="0.55"
+            />
+        </svg>
+
+        <div class="relative w-full max-w-[42rem] rounded-[2.5rem] border border-white/80 bg-white/70 px-6 py-10 shadow-[0_30px_80px_-20px_rgba(120,60,0,0.25)] backdrop-blur-xl sm:px-16">
+            <img
+                src="/images/infernix-workspace-logo.png"
+                alt="Infernix Workspace — Intelligence for Better Business"
+                class="mx-auto h-36 w-auto sm:h-44"
+                width="450"
+                height="214"
             >
-                Log in
-            </button>
-            <Link
-                :href="route('password.request')"
-                class="block text-center text-sm text-surface-500 hover:underline"
+            <h1 class="mt-6 text-center text-3xl font-extrabold tracking-tight text-surface-900 sm:text-4xl">
+                Welcome back
+            </h1>
+            <p class="mt-2 text-center text-sm text-surface-500 sm:text-base">
+                Sign in to Infernix Workspace to access your business platform
+            </p>
+
+            <div class="mt-6">
+                <Flash />
+            </div>
+
+            <form
+                class="mt-2 space-y-4"
+                novalidate
+                @submit.prevent="submit"
             >
-                Forgot password?
-            </Link>
-        </form>
-    </GuestLayout>
+                <div>
+                    <label
+                        for="email"
+                        class="sr-only"
+                    >Email address</label>
+                    <div class="relative">
+                        <svg
+                            class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-surface-500"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.6"
+                            aria-hidden="true"
+                        ><rect
+                            x="3"
+                            y="5"
+                            width="18"
+                            height="14"
+                            rx="2"
+                        /><path d="m4 7 8 6 8-6" /></svg>
+                        <input
+                            id="email"
+                            v-model="form.email"
+                            type="email"
+                            autocomplete="username"
+                            required
+                            autofocus
+                            placeholder="Email address"
+                            class="w-full rounded-xl border border-surface-200 bg-white/90 py-3.5 pl-12 pr-4 text-surface-900 placeholder:text-surface-500 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-400/40"
+                            :aria-invalid="form.errors.email ? 'true' : undefined"
+                            :aria-describedby="form.errors.email ? 'email-error' : undefined"
+                        >
+                    </div>
+                    <p
+                        v-if="form.errors.email"
+                        id="email-error"
+                        class="mt-1 text-sm text-red-700"
+                        role="alert"
+                    >
+                        {{ form.errors.email }}
+                    </p>
+                </div>
+
+                <div>
+                    <label
+                        for="password"
+                        class="sr-only"
+                    >Password</label>
+                    <div class="relative">
+                        <svg
+                            class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-surface-500"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.6"
+                            aria-hidden="true"
+                        ><rect
+                            x="5"
+                            y="10"
+                            width="14"
+                            height="11"
+                            rx="2"
+                        /><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" /></svg>
+                        <input
+                            id="password"
+                            v-model="form.password"
+                            :type="showPassword ? 'text' : 'password'"
+                            autocomplete="current-password"
+                            required
+                            placeholder="Password"
+                            class="w-full rounded-xl border border-surface-200 bg-white/90 py-3.5 pl-12 pr-12 text-surface-900 placeholder:text-surface-500 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-400/40"
+                            :aria-invalid="form.errors.password ? 'true' : undefined"
+                        >
+                        <button
+                            type="button"
+                            class="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-surface-500 hover:text-surface-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
+                            :aria-label="showPassword ? 'Hide password' : 'Show password'"
+                            :aria-pressed="showPassword"
+                            @click="showPassword = !showPassword"
+                        >
+                            <svg
+                                class="h-5 w-5"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="1.6"
+                                aria-hidden="true"
+                            >
+                                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+                                <circle
+                                    cx="12"
+                                    cy="12"
+                                    r="3"
+                                />
+                                <path
+                                    v-if="showPassword"
+                                    d="M4 4l16 16"
+                                />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between text-sm">
+                    <label class="flex cursor-pointer items-center gap-2 text-surface-900">
+                        <input
+                            v-model="form.remember"
+                            type="checkbox"
+                            class="h-5 w-5 rounded border-surface-300 accent-brand-500"
+                        >
+                        Remember me
+                    </label>
+                    <Link
+                        :href="route('password.request')"
+                        class="font-medium text-brand-700 hover:underline"
+                    >
+                        Forgot password?
+                    </Link>
+                </div>
+
+                <button
+                    type="submit"
+                    :disabled="form.processing"
+                    class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#D45F00] to-brand-600 px-4 py-3.5 text-xl font-semibold text-white shadow-[0_10px_25px_-8px_rgba(184,74,0,0.6)] transition hover:to-brand-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-400/50 disabled:opacity-60"
+                >
+                    {{ form.processing ? 'Signing in…' : 'Sign In' }}
+                    <svg
+                        class="h-5 w-5"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        aria-hidden="true"
+                    ><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                </button>
+            </form>
+        </div>
+    </main>
 </template>

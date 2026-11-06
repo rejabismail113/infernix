@@ -1,7 +1,12 @@
-# Changelog — Infernix One
+# Changelog — Infernix Workspace
 
 All notable changes. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the build
 phases of INF-SRS-001 (P1 … P4). Requirement IDs refer to docs/SRS.md; decisions to docs/DECISIONS.md.
+
+## [Unreleased]
+### Changed
+- Product renamed **Infernix Workspace**: redesigned sign-in screens (frosted card, orange waves, phoenix logo), new
+  sidebar logo, favicon, page titles, emails and MFA issuer. Company documents keep the Infernix Evolv Hub name.
 
 ## [1.0.0-rc1] — 2026-11-06 — Phase P4 (Prompt 6): hardening, integrations, handover
 

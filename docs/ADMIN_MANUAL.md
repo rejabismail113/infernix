@@ -1,4 +1,4 @@
-# Administrator manual — Infernix One `v1.0.0-rc1`
+# Administrator manual — Infernix Workspace `v1.0.0-rc1`
 
 For the Owner (Julaiha) and anyone given the OWN role. Menu paths refer to the left navigation; you only see items
 your role allows, but **hiding is not the control** — the server checks every request (docs/PERMISSION_MATRIX.md).

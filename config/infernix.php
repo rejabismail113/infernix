@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Infernix One platform settings. Business policy values live in DB dictionaries (G-09);
+ * Infernix Workspace platform settings. Business policy values live in DB dictionaries (G-09);
  * this file only holds deployment-level defaults.
  */
 return [
@@ -41,7 +41,7 @@ return [
     'security' => [
         'recent_auth_minutes' => 10,
         'invitation_days' => 7,
-        'mfa_issuer' => 'Infernix One',
+        'mfa_issuer' => 'Infernix Workspace',
     ],
 
     'vault' => ['driver' => env('VAULT_DRIVER', 'null')],

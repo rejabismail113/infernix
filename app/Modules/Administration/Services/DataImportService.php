@@ -168,7 +168,7 @@ final class DataImportService
                 default => false,
             };
             if ($exists) {
-                $errors[] = ['row' => $n, 'field' => '-', 'message' => 'Already exists in Infernix One.'];
+                $errors[] = ['row' => $n, 'field' => '-', 'message' => 'Already exists in Infernix Workspace.'];
             }
             if ($type === 'assets' && ! empty($r['category']) && ! AssetCategory::query()->where('name', $r['category'])->exists()) {
                 $errors[] = ['row' => $n, 'field' => 'category', 'message' => 'Unknown asset category.'];

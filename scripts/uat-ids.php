@@ -3,12 +3,12 @@
 // Prints the record ids of the UatDemoSeeder scenarios as JSON for scripts/uat-screenshots.cjs (dev only).
 declare(strict_types=1);
 
+use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Support\Facades\DB;
+
 require __DIR__.'/../vendor/autoload.php';
 $app = require __DIR__.'/../bootstrap/app.php';
 $app->make(Kernel::class)->bootstrap();
-
-use Illuminate\Contracts\Console\Kernel;
-use Illuminate\Support\Facades\DB;
 
 $v = fn (string $sql, array $b = []) => DB::selectOne($sql, $b)?->id;
 echo json_encode([

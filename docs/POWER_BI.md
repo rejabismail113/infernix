@@ -1,6 +1,6 @@
 # Power BI connection (M11-06)
 
-Infernix One exposes a curated, **read-only** PostgreSQL schema `reporting` for Power BI. It contains one view per
+Infernix Workspace exposes a curated, **read-only** PostgreSQL schema `reporting` for Power BI. It contains one view per
 report in SRS §8.1 and nothing else. Views carry business figures only — **no staff names, NRIC/passport, email,
 phone, bank account numbers, free-text descriptions, secrets, usernames or vault references**
 (`tests/Feature/Reporting/ReportingP4Test.php` enforces the column list and the grants).

@@ -1,4 +1,4 @@
-# Infernix One — developer commands. `make setup` after `docker compose up -d` gives a running app
+# Infernix Workspace — developer commands. `make setup` after `docker compose up -d` gives a running app
 # at http://localhost:$APP_PORT (default 8010) with the seeded Owner login (see .env SEED_OWNER_*).
 SHELL := /bin/bash
 DC    := docker compose

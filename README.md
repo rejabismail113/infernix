@@ -1,4 +1,4 @@
-# Infernix One
+# Infernix Workspace
 
 Internal Integrated Business & Operations Management System for **Infernix Evolv Hub** — finance & accounting,
 projects & training, commercial documents, HR/part-time staff, assets, activities, CSR, certifications,

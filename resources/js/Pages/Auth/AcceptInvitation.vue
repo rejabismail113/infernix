@@ -11,7 +11,7 @@ const form = useForm({ name: props.name ?? '', password: '', password_confirmati
     <GuestLayout>
         <Head title="Accept invitation" />
         <h1 class="mb-1 text-xl font-semibold">
-            Welcome to Infernix One
+            Welcome to Infernix Workspace
         </h1>
         <p class="mb-6 text-sm text-surface-500">
             {{ email }} · role: {{ role }}

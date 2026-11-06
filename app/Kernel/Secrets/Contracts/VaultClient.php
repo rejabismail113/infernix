@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Kernel\Secrets\Contracts;
 
 /**
- * The external secret vault (Bitwarden Secrets Manager / 1Password Connect). Infernix One stores only a vault
+ * The external secret vault (Bitwarden Secrets Manager / 1Password Connect). Infernix Workspace stores only a vault
  * item REFERENCE (M13-02); a secret value exists only in memory for the duration of one audited reveal and is
  * never logged, cached, persisted, indexed or exported.
  *

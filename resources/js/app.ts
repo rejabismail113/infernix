@@ -7,7 +7,7 @@ import Aura from '@primevue/themes/aura';
 import { definePreset } from '@primevue/themes';
 import { ZiggyVue } from 'ziggy-js';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Infernix One';
+const appName = import.meta.env.VITE_APP_NAME || 'Infernix Workspace';
 
 /** Infernix Evolv orange as PrimeVue primary (docs/reference/infernix-logo.jpg). */
 const InfernixPreset = definePreset(Aura, {

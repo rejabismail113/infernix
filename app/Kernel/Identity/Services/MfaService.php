@@ -34,7 +34,7 @@ final class MfaService
     {
         $secret = $this->google2fa->generateSecretKey(32);
         $user->forceFill(['mfa_secret' => $secret, 'mfa_confirmed_at' => null])->save();
-        $uri = $this->google2fa->getQRCodeUrl((string) config('infernix.security.mfa_issuer', 'Infernix One'), $user->email, $secret);
+        $uri = $this->google2fa->getQRCodeUrl((string) config('infernix.security.mfa_issuer', 'Infernix Workspace'), $user->email, $secret);
         $svg = (new Writer(new ImageRenderer(new RendererStyle(200), new SvgImageBackEnd)))->writeString($uri);
 
         return ['secret' => $secret, 'qr_svg' => $svg];

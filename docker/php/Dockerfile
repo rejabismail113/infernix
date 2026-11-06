@@ -1,4 +1,4 @@
-# Infernix One — application image (PHP 8.3 CLI + Chromium for Browsershot PDF rendering)
+# Infernix Workspace — application image (PHP 8.3 CLI + Chromium for Browsershot PDF rendering)
 FROM php:8.3-cli-bookworm
 
 ARG NODE_MAJOR=22

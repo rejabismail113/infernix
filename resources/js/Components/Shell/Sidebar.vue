@@ -43,12 +43,18 @@ const activeHref = computed(() => {
         class="flex h-full flex-col"
         aria-label="Main"
     >
-        <div class="flex h-16 items-center gap-2 px-4">
+        <div class="flex h-16 items-center gap-2.5 px-4">
             <img
-                src="/images/infernix-logo.svg"
-                alt="Infernix Evolv"
-                class="h-9"
+                src="/images/infernix-workspace-icon.png"
+                alt=""
+                class="h-11 w-11"
+                width="180"
+                height="180"
             >
+            <span class="flex flex-col leading-none">
+                <span class="text-lg font-extrabold tracking-wide text-surface-900">INFERNIX</span>
+                <span class="mt-1 text-[10px] font-medium tracking-[0.35em] text-surface-500">WORKSPACE</span>
+            </span>
         </div>
         <div class="flex-1 space-y-4 overflow-y-auto px-3 pb-4">
             <div

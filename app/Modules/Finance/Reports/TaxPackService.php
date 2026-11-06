@@ -83,7 +83,7 @@ final class TaxPackService
             ->concat(DB::table('chart_accounts')->where('notes', 'like', 'PLACEHOLDER%')->get()->map(fn ($a) => ['account', $a->code, '', '', 'chart of accounts mapping is a PLACEHOLDER pending accountant approval']));
         $this->csv($zip, 'review_flags.csv', ['kind', 'reference', 'date', 'amount', 'flag'], $flags);
 
-        $zip->addFromString('README.txt', $this->secrets->scrub("Infernix One — tax preparation pack {$year}\nGenerated ".now()->toIso8601String()." by {$actor->name}.\nBookkeeping output for accountant review; not a tax filing (SRS §2.2).\nAmounts in MYR. Evidence files are listed by Document Centre id and SHA-256; download them through Infernix One.\n"));
+        $zip->addFromString('README.txt', $this->secrets->scrub("Infernix Workspace — tax preparation pack {$year}\nGenerated ".now()->toIso8601String()." by {$actor->name}.\nBookkeeping output for accountant review; not a tax filing (SRS §2.2).\nAmounts in MYR. Evidence files are listed by Document Centre id and SHA-256; download them through Infernix Workspace.\n"));
         $zip->close();
         Audit::export('tax_pack', ['year' => $year], $actor);
 

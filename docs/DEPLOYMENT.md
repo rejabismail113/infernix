@@ -1,4 +1,4 @@
-# Deployment — Infernix One `v1.0.0-rc1`
+# Deployment — Infernix Workspace `v1.0.0-rc1`
 
 Single-company, single-host deployment (SRS §6: ~10–30 users). Everything below is the *minimum* for production;
 items marked **PLACEHOLDER** are business or hosting choices still to be confirmed.

@@ -1,4 +1,4 @@
-# HTTP interface — Infernix One `v1.0.0-rc1`
+# HTTP interface — Infernix Workspace `v1.0.0-rc1`
 
 The full machine-readable reference is **[openapi.json](openapi.json)** (OpenAPI 3.1, 391 operations), generated
 from the live route table and the route × role matrix in [PERMISSION_MATRIX.md](PERMISSION_MATRIX.md):
@@ -14,7 +14,7 @@ header. Open it in any OpenAPI viewer (Swagger UI, Redoc, Stoplight, or the VS C
 
 ## 1. Nature of the interface
 
-Infernix One is a server-rendered **Inertia.js** application, not a public REST API. There are no API tokens and
+Infernix Workspace is a server-rendered **Inertia.js** application, not a public REST API. There are no API tokens and
 no third-party clients in v1. Every route sits behind the same session, MFA and authorization stack:
 
 | Concern | Behaviour |

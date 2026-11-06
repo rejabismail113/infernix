@@ -1,4 +1,4 @@
-# Infernix One — Data model
+# Infernix Workspace — Data model
 
 Conventions: PK `id BIGSERIAL`; FKs `<singular>_id BIGINT` with `ON DELETE RESTRICT` unless stated; money
 `NUMERIC(18,4)`; `created_at/updated_at TIMESTAMPTZ`; soft archive via `archived_at` (G-10) — posted

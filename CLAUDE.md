@@ -1,4 +1,4 @@
-# CLAUDE.md — Infernix One
+# CLAUDE.md — Infernix Workspace
 
 Internal Integrated Business & Operations Management System for **Infernix Evolv Hub** (Malaysian sole
 proprietorship, owner: Julaiha). Requirements: `docs/SRS.md` (INF-SRS-001 v1.0). Read it before changing

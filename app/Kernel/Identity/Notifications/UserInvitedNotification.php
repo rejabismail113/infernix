@@ -24,7 +24,7 @@ final class UserInvitedNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('You have been invited to Infernix One')
+            ->subject('You have been invited to Infernix Workspace')
             ->line("You have been invited as {$this->roleName}. The invitation expires in 7 days.")
             ->action('Accept invitation', $this->acceptUrl);
     }

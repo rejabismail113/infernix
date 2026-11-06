@@ -1,4 +1,4 @@
-# Infernix One — Architecture
+# Infernix Workspace — Architecture
 
 Laravel 12 modular monolith, one deployable, one PostgreSQL database, Redis queues, private S3 storage.
 Modules are plain PSR-4 namespaces (no module package) so Larastan, IDEs and Pest groups work unchanged.

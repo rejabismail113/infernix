@@ -27,7 +27,7 @@ final class ResetPasswordNotification extends Notification
         $url = url(route('password.reset', ['token' => $this->token, 'email' => $email], false));
 
         return (new MailMessage)
-            ->subject('Reset your Infernix One password')
+            ->subject('Reset your Infernix Workspace password')
             ->line('You requested a password reset. The link expires in 60 minutes.')
             ->action('Reset password', $url)
             ->line('If you did not request this, no action is needed.');

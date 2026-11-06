@@ -68,8 +68,8 @@ const decide = (r: Req, approve: boolean) => { const note = window.prompt(approv
             class="mb-3 rounded-md p-3 text-sm"
             :class="vault.configured ? 'bg-emerald-50 text-emerald-900' : 'bg-amber-50 text-amber-900'"
         >
-            {{ vault.configured ? `Vault connected (${vault.provider}). Secrets are revealed from the vault only, after re-authentication, and every reveal is audited.` : 'No vault connected: Infernix One shows each credential\'s vault reference — open the secret in your vault.' }}
-            Infernix One never stores passwords, keys or tokens.
+            {{ vault.configured ? `Vault connected (${vault.provider}). Secrets are revealed from the vault only, after re-authentication, and every reveal is audited.` : 'No vault connected: Infernix Workspace shows each credential\'s vault reference — open the secret in your vault.' }}
+            Infernix Workspace never stores passwords, keys or tokens.
         </p>
 
         <Card

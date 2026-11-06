@@ -12,7 +12,7 @@ const copy = computed(() => ({
     419: { title: 'Session expired', text: 'Please refresh the page and try again.' },
     429: { title: 'Too many requests', text: 'Please wait a moment and try again.' },
     500: { title: 'Server error', text: 'Something went wrong on our side. The error has been logged.' },
-    503: { title: 'Down for maintenance', text: 'Infernix One is being updated. Please try again shortly.' },
+    503: { title: 'Down for maintenance', text: 'Infernix Workspace is being updated. Please try again shortly.' },
 }[props.status] ?? { title: 'Error', text: 'Something went wrong.' }));
 </script>
 

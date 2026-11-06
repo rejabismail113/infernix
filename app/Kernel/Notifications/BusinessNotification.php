@@ -50,7 +50,7 @@ final class BusinessNotification extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)->subject($this->title)->line($this->body)->action('Open in Infernix One', $this->url);
+        return (new MailMessage)->subject($this->title)->line($this->body)->action('Open in Infernix Workspace', $this->url);
     }
 
     /** @return array<string, string> */

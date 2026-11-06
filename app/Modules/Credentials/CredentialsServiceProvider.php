@@ -73,7 +73,7 @@ final class CredentialsServiceProvider extends ServiceProvider
 
                 return ReportTable::make('Credential register', ['credential_no' => 'No', 'system_name' => 'System', 'category' => 'Category', 'environment' => 'Environment', 'sensitivity' => 'Sensitivity',
                     'owner' => 'Owner', 'vault' => 'Vault', 'rotation_due' => 'Rotation due', 'expiry_date' => 'Expires', 'shared' => 'Shared account', 'status' => 'Status', 'active_grants' => 'Active grants'], $rows, [],
-                    ['Metadata only. No password, key or token is stored in Infernix One; secrets live in the vault (M13-02).']);
+                    ['Metadata only. No password, key or token is stored in Infernix Workspace; secrets live in the vault (M13-02).']);
             }, []));
     }
 }

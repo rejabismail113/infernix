@@ -23,6 +23,7 @@ use App\Kernel\Notifications\PendingApprovalRegistry;
 use App\Kernel\Numbering\Models\NumberingSequence;
 use App\Kernel\Numbering\NumberingSequencePolicy;
 use App\Kernel\Reports\ReportCatalog;
+use App\Kernel\Search\SearchRegistry;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -40,6 +41,7 @@ final class KernelServiceProvider extends ServiceProvider
         $this->app->singleton(DocumentLinkRegistry::class);
         $this->app->singleton(ReportCatalog::class);
         $this->app->singleton(PendingApprovalRegistry::class);
+        $this->app->singleton(SearchRegistry::class);
     }
 
     public function boot(): void

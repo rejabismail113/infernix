@@ -30,7 +30,7 @@ final class BillApprovalPosting
                 CapitalizationClass::Consumable => $this->accounts->system('consumables'),
                 default => $this->accounts->forExpenseCategory($line->category_id),
             };
-            $lines[] = JournalLineDraft::debit($account->id, $line->amount, "{$bill->bill_no}: {$line->description}", $line->project_id);
+            $lines[] = JournalLineDraft::debit($account->id, $line->amount, "{$bill->bill_no}: {$line->description}", $line->project_id, null, $line->activity_id);
         }
         if ($lines === []) {
             throw new PostingRejected('Bill has no lines.');

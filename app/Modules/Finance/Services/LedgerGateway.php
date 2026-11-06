@@ -105,6 +105,46 @@ final class LedgerGateway
         ]), $actor)->id;
     }
 
+    /**
+     * Asset disposal (M05-04), triggered by the AssetDisposed event: derecognise the asset at cost against the
+     * depreciation already POSTED; the remaining net book value is a loss on disposal. Proceeds, if any, are a
+     * separate real cash receipt recorded in M01 (other income) and LINKED to the disposal — never posted twice.
+     *   Dr Accumulated depreciation (posted to date)   Dr Loss on disposal (NBV)   Cr Fixed assets (cost)
+     */
+    public function postAssetDisposal(int $disposalId, string $disposalNo, string $assetNo, Carbon $date, string $cost, string $accumulated, User $actor, ?int $projectId = null): int
+    {
+        $costM = Money::myr($cost);
+        $accM = Money::myr($accumulated);
+        if (! $costM->isPositive() || $accM->isNegative() || $accM->isGreaterThan($costM)) {
+            throw new PostingRejected('Disposal needs a positive cost and accumulated depreciation between zero and cost.');
+        }
+        $lines = [];
+        if ($accM->isPositive()) {
+            $lines[] = JournalLineDraft::debit($this->accounts->system('accumulated_depreciation')->id, $accM, "{$assetNo} accumulated depreciation", $projectId);
+        }
+        $nbv = $costM->minus($accM);
+        if ($nbv->isPositive()) {
+            $lines[] = JournalLineDraft::debit($this->accounts->system('loss_on_disposal')->id, $nbv, "{$assetNo} net book value written off", $projectId);
+        }
+        $lines[] = JournalLineDraft::credit($this->accounts->system('fixed_assets')->id, $costM, "{$assetNo} derecognised at cost", $projectId);
+
+        return $this->posting->post(new JournalDraft($date, 'asset_disposal', $disposalId, "Asset disposal {$disposalNo} ({$assetNo})", $lines), $actor)->id;
+    }
+
+    /** Monthly straight-line depreciation (feature-flagged, pending accountant decision): Dr Depreciation / Cr Accumulated depreciation. */
+    public function postDepreciation(int $scheduleId, string $assetNo, Carbon $periodEnd, string $amount, User $actor, ?int $projectId = null): int
+    {
+        $m = Money::myr($amount);
+        if (! $m->isPositive()) {
+            throw new PostingRejected('Depreciation must be positive.');
+        }
+
+        return $this->posting->post(new JournalDraft($periodEnd, 'asset_depreciation', $scheduleId, "Depreciation {$assetNo} {$periodEnd->format('Y-m')}", [
+            JournalLineDraft::debit($this->accounts->system('depreciation_expense')->id, $m, "{$assetNo} depreciation", $projectId),
+            JournalLineDraft::credit($this->accounts->system('accumulated_depreciation')->id, $m, "{$assetNo} depreciation"),
+        ]), $actor)->id;
+    }
+
     /** Reverse a journal this gateway posted (void invoice / credit note / receipt). Returns the reversal id. */
     public function reverse(int $journalId, User $actor, string $reason): int
     {

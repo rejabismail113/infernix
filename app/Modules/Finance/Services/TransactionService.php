@@ -39,7 +39,7 @@ final class TransactionService
     ) {}
 
     /**
-     * @param  array{direction: string, inflow_type?: string|null, payment_source?: string|null, capitalization_class?: string|null, transaction_date: string, bank_account_id?: int|null, payment_method?: string|null, bank_reference?: string|null, counterparty_name?: string|null, vendor_id?: int|null, project_id?: int|null, description?: string|null, lines: list<array{description: string, amount: string, category_id?: int|null, cost_centre_id?: int|null, project_id?: int|null}>}  $data
+     * @param  array{direction: string, inflow_type?: string|null, payment_source?: string|null, capitalization_class?: string|null, transaction_date: string, bank_account_id?: int|null, payment_method?: string|null, bank_reference?: string|null, counterparty_name?: string|null, vendor_id?: int|null, project_id?: int|null, activity_id?: int|null, description?: string|null, lines: list<array{description: string, amount: string, category_id?: int|null, cost_centre_id?: int|null, project_id?: int|null, activity_id?: int|null}>}  $data
      */
     public function create(array $data, User $actor): Transaction
     {
@@ -54,7 +54,7 @@ final class TransactionService
                 'capitalization_class' => $data['capitalization_class'] ?? null, 'transaction_date' => $date->toDateString(),
                 'bank_account_id' => $data['bank_account_id'] ?? null, 'payment_method' => $data['payment_method'] ?? null,
                 'bank_reference' => $data['bank_reference'] ?? null, 'counterparty_name' => $data['counterparty_name'] ?? null,
-                'vendor_id' => $data['vendor_id'] ?? null, 'project_id' => $data['project_id'] ?? null, 'description' => $data['description'] ?? null,
+                'vendor_id' => $data['vendor_id'] ?? null, 'project_id' => $data['project_id'] ?? null, 'activity_id' => $data['activity_id'] ?? null, 'description' => $data['description'] ?? null,
                 'tax_treatment' => $data['capitalization_class'] === CapitalizationClass::CapitalAsset->value ? TaxTreatment::Capital->value : TaxTreatment::PendingReview->value,
                 'status' => TransactionStatus::Draft->value, 'gross_amount' => '0', 'created_by' => $actor->id,
             ]);
@@ -64,6 +64,7 @@ final class TransactionService
                 $t->lines()->create([
                     'line_no' => $i + 1, 'description' => $line['description'], 'amount' => $amount,
                     'category_id' => $line['category_id'] ?? null, 'cost_centre_id' => $line['cost_centre_id'] ?? null, 'project_id' => $line['project_id'] ?? null,
+                    'activity_id' => $line['activity_id'] ?? null,
                 ]);
                 $total = $total->plus($amount);
             }

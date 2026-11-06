@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Commercial\Services;
 
+use App\Kernel\Documents\Contracts\HtmlToPdf;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Log;
 use Spatie\Browsershot\Browsershot;
@@ -15,7 +16,7 @@ use Throwable;
  *
  * @see SRS M03-01, M03-08 (Stack: PDF)
  */
-final class PdfRenderer
+final class PdfRenderer implements HtmlToPdf
 {
     public function render(string $html, bool $landscape = false): string
     {

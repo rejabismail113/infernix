@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Kernel\Notifications;
 
+use App\Kernel\Secrets\SecretRedactor;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -19,14 +20,27 @@ final class BusinessNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    /** @param  list<string>  $channels  mail | database */
+    public readonly string $title;
+
+    public readonly string $body;
+
+    /**
+     * Title and body pass through the SecretRedactor: a secret pasted into a record name can never ride along in a
+     * notification payload, email or the in-app bell (M13-05, UAT-08).
+     *
+     * @param  list<string>  $channels  mail | database
+     */
     public function __construct(
         public readonly string $event,
-        public readonly string $title,
-        public readonly string $body,
+        string $title,
+        string $body,
         public readonly string $url,
         public readonly array $channels,
-    ) {}
+    ) {
+        $redactor = app(SecretRedactor::class);
+        $this->title = $redactor->scrub($title);
+        $this->body = $redactor->scrub($body);
+    }
 
     /** @return list<string> */
     public function via(object $notifiable): array

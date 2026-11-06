@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Finance\Http\Controllers;
 
 use App\Kernel\Audit\Audit;
+use App\Kernel\Crm\Contracts\PurchasingDirectory;
 use App\Kernel\Documents\Contracts\DocumentStore;
 use App\Kernel\Http\HandlesDomainErrors;
 use App\Kernel\Identity\Models\User;
@@ -44,11 +45,13 @@ final class BillController
         ]);
     }
 
-    public function create(): Response
+    /** Optional ?goods_receipt_id= pre-fills vendor, PO and lines from an M10 goods/service receipt (M10-02 chain). */
+    public function create(Request $request, PurchasingDirectory $purchasing): Response
     {
         $this->authorize('create', Bill::class);
+        $prefill = $request->filled('goods_receipt_id') ? $purchasing->receiptForBilling((int) $request->query('goods_receipt_id')) : null;
 
-        return Inertia::render('Finance/Bills/Create', ['vendors' => FinanceOptions::vendors(), 'categories' => FinanceOptions::dictionary('expense_category')]);
+        return Inertia::render('Finance/Bills/Create', ['vendors' => FinanceOptions::vendors(), 'categories' => FinanceOptions::dictionary('expense_category'), 'prefill' => $prefill]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -60,9 +63,17 @@ final class BillController
             'lines' => ['required', 'array', 'min:1', 'max:50'], 'lines.*.description' => ['required', 'string', 'max:300'],
             'lines.*.quantity' => ['required', 'regex:/^\d{1,8}(\.\d{1,4})?$/'], 'lines.*.unit_price' => ['required', 'regex:/^\d{1,12}(\.\d{1,2})?$/'],
             'lines.*.category_id' => ['nullable', 'exists:dictionary_items,id'], 'lines.*.capitalization_class' => ['nullable', 'in:CAPITAL_ASSET,LOW_VALUE_EQUIPMENT,CONSUMABLE,EXPENSE'],
+            'goods_receipt_id' => ['nullable', 'integer'],
         ]);
         /** @var User $user */
         $user = $request->user();
+        if (! empty($data['goods_receipt_id'])) {
+            $receipt = app(PurchasingDirectory::class)->receiptForBilling((int) $data['goods_receipt_id']);
+            if ($receipt === null || $receipt['vendor_id'] !== (int) $data['vendor_id']) {
+                return back()->withErrors(['general' => __('The goods receipt does not match this vendor.')])->withInput();
+            }
+            $data['vendor_po_id'] = $receipt['vendor_po_id'];
+        }
 
         return $this->attempt(fn () => redirect()->route('finance.bills.show', $this->service->create($data, $user)), __('Bill saved as draft.'));
     }

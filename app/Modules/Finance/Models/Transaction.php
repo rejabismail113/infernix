@@ -41,6 +41,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $counterparty_name
  * @property int|null $vendor_id
  * @property int|null $project_id
+ * @property int|null $activity_id
  * @property TaxTreatment $tax_treatment
  * @property TransactionStatus $status
  * @property string|null $description

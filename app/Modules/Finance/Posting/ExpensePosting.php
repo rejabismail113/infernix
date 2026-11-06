@@ -51,7 +51,7 @@ final class ExpensePosting
                 CapitalizationClass::CapitalAsset => $this->accounts->system('fixed_assets'),
                 CapitalizationClass::OwnerDrawing => $this->accounts->system('owner_drawings'),
             };
-            $lines[] = JournalLineDraft::debit($account->id, $line->amount, $line->description, $line->project_id ?? $t->project_id, $line->cost_centre_id);
+            $lines[] = JournalLineDraft::debit($account->id, $line->amount, $line->description, $line->project_id ?? $t->project_id, $line->cost_centre_id, $line->activity_id ?? $t->activity_id);
             $total = $total === null ? $line->amount : $total->plus($line->amount);
         }
         if ($total === null) {

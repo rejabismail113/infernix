@@ -38,6 +38,8 @@ use Illuminate\Support\Carbon;
  * @property TaxTreatment $tax_treatment
  * @property string|null $description
  * @property int|null $journal_id
+ * @property int|null $vendor_po_id
+ * @property int|null $goods_receipt_id
  * @property int $created_by
  * @property-read Vendor $vendor
  * @property-read Collection<int, BillLine> $lines
@@ -47,7 +49,7 @@ final class Bill extends Model implements PermissionResource
     use Auditable;
 
     /** @var list<string> */
-    protected $fillable = ['company_id', 'bill_no', 'vendor_id', 'vendor_invoice_no', 'bill_date', 'due_date', 'description', 'created_by'];
+    protected $fillable = ['company_id', 'bill_no', 'vendor_id', 'vendor_invoice_no', 'bill_date', 'due_date', 'description', 'created_by', 'vendor_po_id', 'goods_receipt_id'];
 
     /** @return array<string, string> */
     protected function casts(): array

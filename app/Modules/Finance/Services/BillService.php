@@ -38,7 +38,7 @@ final class BillService
     ) {}
 
     /**
-     * @param  array{vendor_id: int, vendor_invoice_no: string, bill_date: string, due_date: string, description?: string|null, lines: list<array{description: string, quantity: string, unit_price: string, category_id?: int|null, capitalization_class?: string|null, project_id?: int|null}>}  $data
+     * @param  array{vendor_id: int, vendor_invoice_no: string, bill_date: string, due_date: string, description?: string|null, vendor_po_id?: int|null, goods_receipt_id?: int|null, lines: list<array{description: string, quantity: string, unit_price: string, category_id?: int|null, capitalization_class?: string|null, project_id?: int|null, activity_id?: int|null}>}  $data
      */
     public function create(array $data, User $actor): Bill
     {
@@ -54,6 +54,7 @@ final class BillService
                 'bill_no' => $this->numbering->allocate((int) $actor->company_id, 'BILL', (int) $date->format('Y'))['formatted'],
                 'vendor_id' => $data['vendor_id'], 'vendor_invoice_no' => trim($data['vendor_invoice_no']), 'bill_date' => $date->toDateString(),
                 'due_date' => Carbon::parse($data['due_date'])->toDateString(), 'description' => $data['description'] ?? null, 'created_by' => $actor->id,
+                'vendor_po_id' => $data['vendor_po_id'] ?? null, 'goods_receipt_id' => $data['goods_receipt_id'] ?? null,
             ]);
             $total = Money::zero();
             foreach (array_values($data['lines']) as $i => $l) {
@@ -62,6 +63,7 @@ final class BillService
                     'line_no' => $i + 1, 'description' => $l['description'], 'quantity' => $l['quantity'], 'unit_price' => Money::myr($l['unit_price']),
                     'amount' => $amount, 'category_id' => $l['category_id'] ?? null,
                     'capitalization_class' => $l['capitalization_class'] ?? CapitalizationClass::Expense->value, 'project_id' => $l['project_id'] ?? null,
+                    'activity_id' => $l['activity_id'] ?? null,
                 ]);
                 $total = $total->plus($amount);
             }

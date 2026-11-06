@@ -65,6 +65,7 @@ final class ChartOfAccountsSeeder extends Seeder
         ['5160', 'Consumables', 'expense', 'consumables', 'consumables', true, 'pending_review'],
         ['5170', 'Part-time & contractor fees', 'expense', 'staff_costs', 'staff_costs_contract', true, 'pending_review'],
         ['5800', 'Depreciation', 'expense', 'depreciation', 'depreciation_expense', true, 'pending_review'],
+        ['5810', 'Loss on disposal of assets', 'expense', 'disposal', 'loss_on_disposal', true, 'pending_review'],
         ['5900', 'General expenses', 'expense', 'operating', 'general_expense', true, 'pending_review'],
     ];
 

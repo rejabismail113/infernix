@@ -20,13 +20,14 @@ use Illuminate\Database\Eloquent\Model;
  * @property int|null $category_id
  * @property CapitalizationClass $capitalization_class
  * @property int|null $project_id
+ * @property int|null $activity_id
  */
 final class BillLine extends Model
 {
     public $timestamps = false;
 
     /** @var list<string> */
-    protected $fillable = ['bill_id', 'line_no', 'description', 'quantity', 'unit_price', 'amount', 'category_id', 'capitalization_class', 'project_id'];
+    protected $fillable = ['bill_id', 'line_no', 'description', 'quantity', 'unit_price', 'amount', 'category_id', 'capitalization_class', 'project_id', 'activity_id'];
 
     /** @return array<string, string> */
     protected function casts(): array

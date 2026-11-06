@@ -16,6 +16,7 @@ final class NumberingSequenceSeeder extends Seeder
         'QUOTATION' => 'QT', 'INVOICE' => 'INV', 'RECEIPT' => 'RC', 'PAYMENT_VOUCHER' => 'PV', 'CREDIT_NOTE' => 'CN',
         'VENDOR_PO' => 'PO', 'CLIENT_PO' => 'CPO', 'JOURNAL' => 'JV', 'CLAIM' => 'CL', 'BILL' => 'BL', 'PURCHASE_REQUEST' => 'PR',
         'MEMO' => 'MEMO', 'LETTER' => 'LTR', 'CERTIFICATE' => 'CERT', 'ASSET' => 'AST', 'PAYMENT_BATCH' => 'PB', 'TRANSACTION' => 'TX', 'PROJECT' => 'PRJ', 'STAFF' => 'ST', 'APPOINTMENT_LETTER' => 'APL',
+        'ACTIVITY' => 'ACT', 'CSR_PROGRAMME' => 'CSR', 'GOODS_RECEIPT' => 'GRN', 'CREDENTIAL' => 'CRD', 'ASSET_DISPOSAL' => 'DSP',
     ];
 
     public function run(): void

@@ -98,6 +98,16 @@ final class ProjectsDirectory implements ProjectDirectory
         };
     }
 
+    public function visibleClientIds(User $user): array|string
+    {
+        $projects = $this->visibleProjectIds($user);
+        if ($projects === '*') {
+            return '*';
+        }
+
+        return $projects === [] ? [] : Project::query()->whereIn('id', $projects)->distinct()->pluck('client_id')->map(fn ($id): int => (int) $id)->values()->all();
+    }
+
     public function leadSnapshot(int $leadId): ?array
     {
         $l = Lead::query()->find($leadId);

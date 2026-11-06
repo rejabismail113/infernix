@@ -8,12 +8,14 @@ use App\Kernel\Audit\Audit;
 use App\Kernel\Identity\Models\User;
 use App\Kernel\Money\Money;
 use App\Kernel\Numbering\Services\NumberingService;
+use App\Modules\HumanResources\Events\StaffLifecycleChanged;
 use App\Modules\HumanResources\Exceptions\HrRejected;
 use App\Modules\HumanResources\Models\Engagement;
 use App\Modules\HumanResources\Models\StaffBankDetail;
 use App\Modules\HumanResources\Models\StaffProfile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 
 /**
  * Staff profiles, restricted identifiers/bank details (masked; reveal audited) and versioned rate agreements.
@@ -33,6 +35,7 @@ final class StaffService
             if (isset($data['classification'])) {
                 $staff->forceFill(['classification_reviewed_at' => now(), 'classification_reviewed_by' => $actor->id])->save();
             }
+            DB::afterCommit(fn () => Event::dispatch(new StaffLifecycleChanged($staff->id, $staff->user_id, 'joiner', 'new staff profile', $actor->id)));
 
             return $staff;
         });
@@ -46,7 +49,18 @@ final class StaffService
             $fields['classification_reviewed_at'] = now();
             $fields['classification_reviewed_by'] = $actor->id;
         }
+        $before = ['status' => $staff->status, 'position' => $staff->position, 'engagement_type' => $staff->engagement_type, 'user_id' => $staff->user_id];
         $staff->forceFill($fields)->save();
+        $kind = match (true) {
+            $before['status'] === 'active' && $staff->status === 'inactive' => 'leaver',
+            $before['status'] === 'inactive' && $staff->status === 'active' => 'joiner',
+            $before['position'] !== $staff->position || $before['engagement_type'] !== $staff->engagement_type => 'mover',
+            default => null,
+        };
+        if ($kind !== null) {
+            Event::dispatch(new StaffLifecycleChanged($staff->id, $staff->user_id ?? $before['user_id'], $kind,
+                $kind === 'mover' ? trim("{$before['position']} → {$staff->position}; {$before['engagement_type']} → {$staff->engagement_type}") : "status {$before['status']} → {$staff->status}", $actor->id));
+        }
 
         return $staff;
     }

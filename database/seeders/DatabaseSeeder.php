@@ -9,7 +9,9 @@ use App\Modules\Administration\Database\Seeders\DictionarySeeder;
 use App\Modules\Administration\Database\Seeders\FiscalYearSeeder;
 use App\Modules\Administration\Database\Seeders\NotificationRuleSeeder;
 use App\Modules\Administration\Database\Seeders\NumberingSequenceSeeder;
+use App\Modules\Assets\Database\Seeders\AssetCategorySeeder;
 use App\Modules\Commercial\Database\Seeders\DocumentTemplateSeeder;
+use App\Modules\Credentials\Database\Seeders\DevSentinelCredentialSeeder;
 use App\Modules\DocumentCentre\Database\Seeders\RequiredEvidenceRuleSeeder;
 use App\Modules\DocumentCentre\Database\Seeders\RetentionRuleSeeder;
 use App\Modules\Finance\Database\Seeders\ChartOfAccountsSeeder;
@@ -36,6 +38,8 @@ final class DatabaseSeeder extends Seeder
             FinanceSetupSeeder::class,
             DocumentTemplateSeeder::class,
             ReportMetricSeeder::class,
+            AssetCategorySeeder::class,
+            DevSentinelCredentialSeeder::class,
         ]);
     }
 }

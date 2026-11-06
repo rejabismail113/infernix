@@ -8,11 +8,16 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import { fieldError } from '@/lib/errors';
 import type { Option } from '@/types/finance';
 
-const props = defineProps<{ vendors: Option[]; categories: Option[] }>();
+interface Prefill { goods_receipt_id: number; grn_no: string; vendor_id: number; vendor_po_id: number; lines: { description: string; quantity: string; unit_price: string; capitalization_class: string }[] }
+const props = defineProps<{ vendors: Option[]; categories: Option[]; prefill?: Prefill | null }>();
 interface Line { description: string; quantity: string; unit_price: string; category_id: number | ''; capitalization_class: string }
 const blank = (): Line => ({ description: '', quantity: '1', unit_price: '', category_id: '', capitalization_class: 'EXPENSE' });
 const today = new Date().toISOString().slice(0, 10);
-const form = useForm({ vendor_id: (props.vendors[0]?.id ?? '') as number | '', vendor_invoice_no: '', bill_date: today, due_date: today, description: '', lines: [blank()] as Line[] });
+const form = useForm({
+    vendor_id: (props.prefill?.vendor_id ?? props.vendors[0]?.id ?? '') as number | '', vendor_invoice_no: '', bill_date: today, due_date: today,
+    description: props.prefill ? `Goods receipt ${props.prefill.grn_no}` : '', goods_receipt_id: props.prefill?.goods_receipt_id ?? null,
+    lines: (props.prefill ? props.prefill.lines.map((l) => ({ ...blank(), ...l })) : [blank()]) as Line[],
+});
 </script>
 
 <template>
@@ -21,6 +26,13 @@ const form = useForm({ vendor_id: (props.vendors[0]?.id ?? '') as number | '', v
         :breadcrumbs="[{ label: 'Finance', href: route('finance.overview') }, { label: 'Bills', href: route('finance.bills.index') }, { label: 'New' }]"
     >
         <Card description="A vendor invoice can be recorded only once. Approval posts it to payables.">
+            <p
+                v-if="prefill"
+                class="mb-3 rounded-md bg-brand-50 p-3 text-sm text-brand-900"
+                data-test="bill-from-grn"
+            >
+                Pre-filled from goods receipt {{ prefill.grn_no }} — the bill will be linked to its vendor PO.
+            </p>
             <p
                 v-if="vendors.length === 0"
                 class="text-sm"

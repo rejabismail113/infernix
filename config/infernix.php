@@ -61,7 +61,7 @@ return [
         ],
         'link_types' => [
             'attachment', 'receipt', 'invoice', 'contract', 'agreement', 'nda', 'photo', 'evidence', 'warranty',
-            'certificate', 'report', 'logo', 'signature', 'ssm_registration', 'issued_document', 'client_po', 'export_file', 'memo', 'appointment', 'other',
+            'certificate', 'report', 'logo', 'signature', 'ssm_registration', 'issued_document', 'client_po', 'export_file', 'memo', 'appointment', 'handover', 'itinerary', 'other',
         ],
         // Linking with these types freezes the document (issued commercial documents never change, M03-07).
         'freezing_link_types' => ['issued_document'],
@@ -75,9 +75,28 @@ return [
         'default_retention_rule' => 'general_7y',
     ],
 
+    // M05 capitalisation policy (M05-02) — PLACEHOLDER thresholds pending accountant sign-off (A-64).
+    'assets' => [
+        'capital_threshold' => env('ASSET_CAPITAL_THRESHOLD', '2000.00'),
+        'low_value_threshold' => env('ASSET_LOW_VALUE_THRESHOLD', '500.00'),
+        'warranty_alert_days' => 30,
+    ],
+
+    // M13 vault (M13-03). Drivers: null (not configured: reference + deep link only), fake (dev/test ONLY, returns
+    // the fake sentinel), bitwarden (Bitwarden Secrets Manager), onepassword (1Password Connect). Credentials for
+    // the real drivers come from the environment only — never the database (M13-02).
+    'vault' => [
+        'driver' => env('VAULT_DRIVER', 'null'),
+        'reveal_seconds' => 30,
+        'bitwarden' => ['api_url' => env('BWS_API_URL', 'https://api.bitwarden.com'), 'identity_url' => env('BWS_IDENTITY_URL', 'https://identity.bitwarden.com'),
+            'access_token' => env('BWS_ACCESS_TOKEN'), 'web_vault_url' => env('BWS_WEB_URL', 'https://vault.bitwarden.com')],
+        'onepassword' => ['connect_url' => env('OP_CONNECT_HOST'), 'token' => env('OP_CONNECT_TOKEN'), 'vault_id' => env('OP_VAULT_ID')],
+    ],
+
     'pdf' => ['driver' => env('PDF_DRIVER', 'browsershot')],
     'features' => [
         'myinvois' => (bool) env('FEATURE_MYINVOIS', false),
         'depreciation_posting' => (bool) env('FEATURE_DEPRECIATION_POSTING', false),
+        'vault' => (bool) env('FEATURE_VAULT', false),
     ],
 ];

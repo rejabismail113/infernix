@@ -24,6 +24,10 @@ final class NotificationRuleSeeder extends Seeder
             ['SubscriptionRenewalDue', ['FIN', 'OWN'], 'both', 60],
             ['SubscriptionRenewalDue', ['FIN', 'OWN'], 'both', 30],
             ['CredentialRotationDue', ['OWN'], 'in_app', 14],
+            ['MembershipRenewalDue', ['HR', 'OWN'], 'both', 90],
+            ['MembershipRenewalDue', ['HR', 'OWN'], 'both', 60],
+            ['MembershipRenewalDue', ['HR', 'OWN'], 'both', 30],
+            ['WarrantyExpiring', ['FIN', 'OWN'], 'in_app', 30],
             ['BackupFailed', ['OWN'], 'both', 0],
         ];
         foreach ($rules as [$event, $roles, $channel, $lead]) {

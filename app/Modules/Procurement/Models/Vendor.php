@@ -20,13 +20,19 @@ use Illuminate\Database\Eloquent\Model;
  * @property array<string, string>|null $contacts
  * @property string|null $bank_reference
  * @property string $status
+ * @property string|null $category
+ * @property string|null $email
+ * @property string|null $phone
+ * @property string|null $address
+ * @property int $payment_terms_days
+ * @property string|null $notes
  */
 final class Vendor extends Model implements PermissionResource
 {
     use Auditable;
 
     /** @var list<string> */
-    protected $fillable = ['company_id', 'name', 'registration_no', 'tax_no', 'contacts', 'bank_reference', 'status'];
+    protected $fillable = ['company_id', 'name', 'registration_no', 'tax_no', 'contacts', 'bank_reference', 'status', 'category', 'email', 'phone', 'address', 'payment_terms_days', 'notes'];
 
     /** @var list<string> */
     protected $hidden = ['bank_reference'];

@@ -6,7 +6,9 @@ namespace App\Modules\Commercial;
 
 use App\Kernel\Approval\ApprovalService;
 use App\Kernel\Documents\Contracts\GeneratedDocumentIssuer;
+use App\Kernel\Documents\Contracts\HtmlToPdf;
 use App\Kernel\Documents\Contracts\IssuedDocumentRenderer;
+use App\Kernel\Documents\Contracts\VendorPurchaseOrders;
 use App\Kernel\Documents\DocumentLinkRegistry;
 use App\Kernel\Documents\LinkableEntityType;
 use App\Kernel\Notifications\PendingApprovalRegistry;
@@ -43,6 +45,8 @@ use App\Modules\Commercial\Policies\VoucherDocumentPolicy;
 use App\Modules\Commercial\Reports\CommercialReports;
 use App\Modules\Commercial\Services\CommercialIssuedDocumentRenderer;
 use App\Modules\Commercial\Services\GeneratorService;
+use App\Modules\Commercial\Services\PdfRenderer;
+use App\Modules\Commercial\Services\VendorPurchaseOrderService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -61,6 +65,8 @@ final class CommercialServiceProvider extends ServiceProvider
     {
         $this->app->bind(IssuedDocumentRenderer::class, CommercialIssuedDocumentRenderer::class);
         $this->app->bind(GeneratedDocumentIssuer::class, GeneratorService::class);
+        $this->app->bind(HtmlToPdf::class, PdfRenderer::class);
+        $this->app->bind(VendorPurchaseOrders::class, VendorPurchaseOrderService::class);
     }
 
     public function boot(): void

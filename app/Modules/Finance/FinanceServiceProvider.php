@@ -7,13 +7,16 @@ namespace App\Modules\Finance;
 use App\Kernel\Approval\ApprovalService;
 use App\Kernel\Documents\DocumentLinkRegistry;
 use App\Kernel\Documents\LinkableEntityType;
+use App\Kernel\Finance\Contracts\FinanceRecords;
 use App\Kernel\Identity\Enums\PermissionAction;
 use App\Kernel\Identity\Models\User;
 use App\Kernel\Identity\Services\PermissionService;
 use App\Kernel\Notifications\PendingApprovalRegistry;
 use App\Kernel\Reports\ReportCatalog;
 use App\Kernel\Reports\ReportDefinition;
+use App\Modules\Assets\Events\AssetDisposed;
 use App\Modules\Finance\Http\Controllers\ReportController;
+use App\Modules\Finance\Listeners\PostAssetDisposal;
 use App\Modules\Finance\Models\BankAccount;
 use App\Modules\Finance\Models\Bill;
 use App\Modules\Finance\Models\ChartAccount;
@@ -31,7 +34,9 @@ use App\Modules\Finance\Policies\JournalPolicy;
 use App\Modules\Finance\Policies\PaymentPolicy;
 use App\Modules\Finance\Policies\TransactionPolicy;
 use App\Modules\Finance\Reports\FinanceReports;
+use App\Modules\Finance\Services\FinanceRecordsService;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -47,7 +52,7 @@ final class FinanceServiceProvider extends ServiceProvider
 
     public function register(): void
     {
-        //
+        $this->app->bind(FinanceRecords::class, FinanceRecordsService::class);
     }
 
     public function boot(): void
@@ -62,6 +67,8 @@ final class FinanceServiceProvider extends ServiceProvider
         ] as $model => $policy) {
             Gate::policy($model, $policy);
         }
+        // M05-04: an approved disposal posts its journal synchronously, inside the disposal's transaction.
+        Event::listen(AssetDisposed::class, PostAssetDisposal::class);
         Gate::define('set-tax-treatment', fn (User $u): bool => app(PermissionService::class)->can($u, PermissionAction::Edit, 'tax_review'));
         Gate::define('view-finance-reports', fn (User $u): bool => app(PermissionService::class)->can($u, PermissionAction::View, 'finance_reports'));
         Gate::define('export-finance-reports', fn (User $u): bool => app(PermissionService::class)->can($u, PermissionAction::Export, 'finance_reports'));

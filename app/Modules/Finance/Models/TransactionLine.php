@@ -18,13 +18,14 @@ use Illuminate\Database\Eloquent\Model;
  * @property int|null $account_id
  * @property int|null $cost_centre_id
  * @property int|null $project_id
+ * @property int|null $activity_id
  */
 final class TransactionLine extends Model
 {
     public $timestamps = false;
 
     /** @var list<string> */
-    protected $fillable = ['transaction_id', 'line_no', 'description', 'amount', 'category_id', 'account_id', 'cost_centre_id', 'project_id'];
+    protected $fillable = ['transaction_id', 'line_no', 'description', 'amount', 'category_id', 'account_id', 'cost_centre_id', 'project_id', 'activity_id'];
 
     /** @return array<string, string> */
     protected function casts(): array

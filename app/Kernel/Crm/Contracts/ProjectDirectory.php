@@ -36,6 +36,9 @@ interface ProjectDirectory
     /** @return list<int>|'*' projects the user may view ('*' = all) — M02-07 record scope */
     public function visibleProjectIds(User $user): array|string;
 
+    /** @return list<int>|'*' clients of the projects the user may view ('*' = all) — M13-06 client segregation */
+    public function visibleClientIds(User $user): array|string;
+
     /** @return array{id: int, title: string, client_id: int|null, prospect_name: string|null, estimated_value: string, engagement_type: string, stage: string}|null */
     public function leadSnapshot(int $leadId): ?array;
 

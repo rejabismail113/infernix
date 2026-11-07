@@ -4,7 +4,7 @@
  * arrow keys to move, Enter to choose, Esc to close. `pinned` options (e.g. "+ Add new client") always stay at the
  * bottom of the list whatever the search. For server-searched lists use <PickerModal> instead.
  */
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 
 export interface SearchOption { value: string | number; label: string; meta?: string | null }
 
@@ -22,6 +22,19 @@ const open = ref(false);
 const term = ref('');
 const active = ref(0);
 const list = ref<HTMLElement | null>(null);
+const input = ref<HTMLInputElement | null>(null);
+// The list is position:fixed so a scrolling dialog body cannot clip it; it follows the input on scroll / resize.
+const pos = ref({ top: 0, left: 0, width: 0 });
+function place() {
+    const r = input.value?.getBoundingClientRect();
+    if (r) pos.value = { top: r.bottom + 4, left: r.left, width: r.width };
+}
+function track(on: boolean) {
+    const fn = on ? window.addEventListener : window.removeEventListener;
+    fn('scroll', place, true);
+    fn('resize', place);
+}
+onBeforeUnmount(() => track(false));
 
 const all = computed(() => [...props.options, ...props.pinned]);
 const selected = computed(() => all.value.find((o) => o.value === model.value) ?? null);
@@ -32,7 +45,9 @@ const filtered = computed(() => {
 });
 
 watch(open, (v) => {
+    track(v);
     if (v) {
+        place();
         term.value = '';
         active.value = Math.max(0, filtered.value.findIndex((o) => o.value === model.value));
     }
@@ -72,6 +87,7 @@ function onBlur(e: FocusEvent) {
     <div class="relative">
         <input
             :id="id"
+            ref="input"
             :value="open ? term : (selected?.label ?? '')"
             type="text"
             role="combobox"
@@ -102,7 +118,8 @@ function onBlur(e: FocusEvent) {
             ref="list"
             role="listbox"
             tabindex="-1"
-            class="absolute left-0 right-0 z-30 mt-1 max-h-64 overflow-auto rounded-xl border border-surface-200 bg-white/95 p-1 shadow-xl backdrop-blur"
+            class="fixed z-[60] max-h-64 overflow-auto rounded-xl border border-surface-200 bg-white/95 p-1 shadow-xl backdrop-blur"
+            :style="{ top: `${pos.top}px`, left: `${pos.left}px`, width: `${pos.width}px` }"
         >
             <li
                 v-for="(o, i) in filtered"

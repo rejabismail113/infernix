@@ -95,7 +95,6 @@ const pinnedOptions = computed(() => [
 const party = computed<'existing' | 'prospect' | 'new_client' | null>(() => (clientPick.value === NEW_PROSPECT ? 'prospect'
     : clientPick.value === NEW_CLIENT ? 'new_client' : clientPick.value === '' ? null : 'existing'));
 const closedLead = computed(() => editing.value !== null && !isOpen(editing.value.stage));
-const selectedType = computed(() => props.types.find((t) => t.value === form.engagement_type) ?? null);
 
 // Existing client → fill contact person / email / phone from the Client master (only blanks are filled).
 watch(clientPick, (v) => {
@@ -311,12 +310,12 @@ function save() {
             size="xl"
             @close="modalOpen = false"
         >
-            <p class="-mt-1 mb-3 text-sm text-surface-500">
+            <p class="-mt-1 mb-2.5 text-sm text-surface-500">
                 Fill in the details below to {{ editing ? 'update this' : 'record a new' }} business opportunity.
             </p>
             <form
                 id="lead-form"
-                class="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3"
+                class="fields-compact grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2 lg:grid-cols-4"
                 novalidate
                 @submit.prevent="save"
             >
@@ -325,7 +324,7 @@ function save() {
                     label="Opportunity Name"
                     required
                     :error="form.errors.title"
-                    class="sm:col-span-2 lg:col-span-3"
+                    class="sm:col-span-2"
                 >
                     <input
                         id="l-title"
@@ -343,7 +342,6 @@ function save() {
                     required
                     :class="party === 'prospect' || party === 'new_client' ? '' : 'sm:col-span-2'"
                     :error="partyMissing ? 'Choose a client, or add a new prospect / client.' : clientError"
-                    :hint="party === 'existing' ? 'Contact details are filled in from the Client master.' : undefined"
                 >
                     <SearchSelect
                         id="l-client"
@@ -375,7 +373,6 @@ function save() {
                     label="New Client Name"
                     required
                     :error="errs['new_client.name']"
-                    hint="Saved to the Client master as an active client."
                 >
                     <input
                         id="l-newclient"
@@ -390,7 +387,6 @@ function save() {
                     label="Type"
                     required
                     :error="form.errors.engagement_type"
-                    :hint="selectedType?.description"
                 >
                     <select
                         id="l-type"
@@ -407,6 +403,7 @@ function save() {
                             v-for="t in types"
                             :key="t.value"
                             :value="t.value"
+                            :title="t.description"
                         >
                             {{ t.label }}
                         </option>
@@ -545,7 +542,7 @@ function save() {
                     id="l-stage"
                     label="Lead Status"
                     :error="form.errors.stage"
-                    :hint="closedLead ? 'This lead is closed; its status can no longer change.' : stageDescriptions[form.stage]"
+                    :hint="closedLead ? 'This lead is closed; its status can no longer change.' : undefined"
                 >
                     <select
                         id="l-stage"
@@ -557,6 +554,7 @@ function save() {
                             v-for="s in stages"
                             :key="s"
                             :value="s"
+                            :title="stageDescriptions[s]"
                         >
                             {{ stageLabel(s) }}
                         </option>
@@ -602,7 +600,7 @@ function save() {
                     label="Explain why the lead was lost"
                     required
                     :error="form.errors.lost_reason"
-                    class="sm:col-span-2 lg:col-span-3"
+                    class="sm:col-span-2"
                 >
                     <textarea
                         id="l-lost-other"
@@ -617,7 +615,7 @@ function save() {
                     id="l-notes"
                     label="Notes"
                     :error="form.errors.notes"
-                    class="sm:col-span-2 lg:col-span-3"
+                    class="sm:col-span-2 lg:col-span-4"
                 >
                     <textarea
                         id="l-notes"

@@ -59,11 +59,11 @@ onBeforeUnmount(() => opener?.focus?.());
                 role="dialog"
                 aria-modal="true"
                 :aria-label="title"
-                class="w-full rounded-xl bg-white shadow-2xl"
+                class="flex max-h-[calc(100dvh-2rem)] w-full flex-col rounded-xl bg-white shadow-2xl sm:max-h-[calc(96dvh-1rem)]"
                 :class="{ 'max-w-lg': size === 'md', 'max-w-3xl': size === 'lg', 'max-w-5xl': size === 'xl' }"
                 @keydown="onKeydown"
             >
-                <header class="flex items-center justify-between border-b border-surface-200 px-5 py-4">
+                <header class="flex shrink-0 items-center justify-between border-b border-surface-200 px-5 py-4">
                     <h2 class="text-lg font-semibold">
                         {{ title }}
                     </h2>
@@ -77,12 +77,12 @@ onBeforeUnmount(() => opener?.focus?.());
                         <Icon name="close" />
                     </button>
                 </header>
-                <div class="px-5 py-4">
+                <div class="min-h-0 overflow-y-auto px-5 py-4">
                     <slot />
                 </div>
                 <footer
                     v-if="$slots.footer"
-                    class="flex justify-end gap-2 border-t border-surface-200 px-5 py-3"
+                    class="flex shrink-0 justify-end gap-2 border-t border-surface-200 px-5 py-3"
                 >
                     <slot name="footer" />
                 </footer>

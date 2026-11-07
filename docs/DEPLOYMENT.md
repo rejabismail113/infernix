@@ -18,7 +18,7 @@ workers: horizon (queues default, notifications, pdf, exports, imports) · sched
 | Web | **php-fpm 8.3 + nginx** built from `docker/php/Dockerfile` (same extensions + Chromium). The image's default `php artisan serve` CMD is for development only — override it with `php-fpm` and put nginx in front. |
 | Database | PostgreSQL 16, `DB_*` app user = owner of the schema; nothing else connects except the optional read-only BI login (docs/POWER_BI.md). Encrypted disk / managed service. |
 | Queue / cache / session store | Redis with `REDIS_PASSWORD`; Horizon dashboard is owner-only (A-91). |
-| Files | `FILESYSTEM_DISK`/`documents` = S3 private bucket (versioning on, public access blocked). **No** public disk; every download is a signed, policy-checked route. |
+| Files | `FILESYSTEM_DISK`/`documents` = S3 private bucket (versioning on, public access blocked). **No** public disk; every download is a signed, policy-checked app route that streams the bytes (`DOCUMENT_DELIVERY=app`; `presigned` only if browsers can reach the S3 endpoint). |
 | Mail | SMTP relay with SPF/DKIM for the sending domain (**PLACEHOLDER** provider). |
 | Region | Malaysian / regional data residency per PDPA review (**PLACEHOLDER**, see DECISIONS "Pending legal review"). |
 

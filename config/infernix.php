@@ -51,6 +51,10 @@ return [
         'scanner' => env('DOCUMENT_SCANNER', 'null'),
         'clamav_binary' => env('CLAMAV_BINARY', '/usr/bin/clamdscan'),
         'signed_url_ttl_minutes' => 5,
+        // 'app' (default): bytes stream through the signed, policy-checked app route, so browsers never need to reach
+        // the object store (works on a LAN / Docker where its host is internal). 'presigned': redirect to a presigned
+        // S3 URL — only when AWS_ENDPOINT / AWS_URL is a host browsers can reach (e.g. a public S3 / CDN endpoint).
+        'delivery' => env('DOCUMENT_DELIVERY', 'app'),
         'max_size_kb' => (int) env('DOCUMENT_MAX_SIZE_KB', 25 * 1024),
         // extension => MIME types accepted for that extension (content-sniffed, never trusted from the client)
         'allowed' => [

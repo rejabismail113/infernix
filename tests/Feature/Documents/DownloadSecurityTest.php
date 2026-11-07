@@ -97,8 +97,18 @@ it('inherits access from the linked record: HR (may view the staff record) can d
     actingAsSatisfied(userWithRoles('PM'))->get(route('documents.download', $this->doc))->assertForbidden();
 })->group('M06-02', '§6.3', 'M04-01');
 
-it('uses a presigned object URL with 5-minute expiry when the disk supports it (S3/MinIO)', function (): void {
+it('streams through the signed app route by default even on S3, so browsers never need the object-store host', function (): void {
     config(['filesystems.disks.'.config('infernix.documents.disk').'.driver' => 's3']);
+    Storage::disk(config('infernix.documents.disk'))->buildTemporaryUrlsUsing(fn (): string => 'http://minio:9000/should-not-be-used');
+
+    $res = actingAsSatisfied($this->staffA)->get(route('documents.download', $this->doc))->assertRedirect();
+    $location = (string) $res->headers->get('Location');
+    expect($location)->toStartWith(route('documents.stream', ['version' => $this->doc->versions()->first()->id]))
+        ->and($location)->toContain('signature=')->not->toContain('minio');
+})->group('UAT-10', 'M06-02');
+
+it('uses a presigned object URL with 5-minute expiry when DOCUMENT_DELIVERY=presigned (S3)', function (): void {
+    config(['filesystems.disks.'.config('infernix.documents.disk').'.driver' => 's3', 'infernix.documents.delivery' => 'presigned']);
     $captured = [];
     Storage::disk(config('infernix.documents.disk'))->buildTemporaryUrlsUsing(function (string $path, DateTimeInterface $expiration, array $options) use (&$captured): string {
         $captured = compact('path', 'expiration', 'options');

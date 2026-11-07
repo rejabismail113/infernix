@@ -13,6 +13,8 @@ phases of INF-SRS-001 (P1 … P4). Requirement IDs refer to docs/SRS.md; decisio
 ### Fixed
 - Blank page when the app is opened by LAN IP in development: the Vite dev server now follows `APP_URL` instead of a
   hard-coded `localhost`.
+- Downloading a PDF or attachment opened `minio:9000/...` ("site can't be reached"): files now stream through the app's
+  signed, permission-checked link; presigned object-store links are opt-in (`DOCUMENT_DELIVERY=presigned`).
 
 ## [1.0.0-rc1] — 2026-11-06 — Phase P4 (Prompt 6): hardening, integrations, handover
 

@@ -5,6 +5,10 @@ phases of INF-SRS-001 (P1 … P4). Requirement IDs refer to docs/SRS.md; decisio
 
 ## [Unreleased]
 ### Changed
+- **Leads & Pipeline** redesigned to the owner's spec: page description, stage summary tiles and a proper table
+  (search, sort, overdue follow-ups in red); "New Lead" form with searchable client (+ Add New Prospect / + Add New
+  Client), contact details auto-filled from the client, new opportunity types and sources (Others → specify), next
+  follow-up date, lead status on the form and coded lost reasons (Others → explanation). "Assigned To" removed.
 - Product renamed **Infernix Workspace**: redesigned sign-in screens (frosted card, orange waves, phoenix logo), new
   sidebar logo, favicon, page titles, emails and MFA issuer. Company documents keep the Infernix Evolv Hub name.
 - Quotations, invoices, letters and certificates issued from now on carry the phoenix logo above the company name;

@@ -696,6 +696,10 @@ erDiagram
         numeric estimated_value "18,4"
         bigint owner_user_id FK
         date expected_close
+        varchar engagement_type "project training consulting retainer support licensing other"
+        varchar contact_person
+        date next_follow_up_on
+        varchar lost_reason_code
     }
     projects {
         bigint id PK

@@ -9,7 +9,10 @@ use App\Kernel\Identity\Models\User;
 use App\Kernel\Money\Money;
 use App\Kernel\Numbering\Services\NumberingService;
 use App\Kernel\People\Contracts\StaffDirectory;
+use App\Modules\Projects\Enums\LeadLostReason;
+use App\Modules\Projects\Enums\LeadType;
 use App\Modules\Projects\Exceptions\ProjectRejected;
+use App\Modules\Projects\Models\Client;
 use App\Modules\Projects\Models\Lead;
 use App\Modules\Projects\Models\Milestone;
 use App\Modules\Projects\Models\Project;
@@ -144,24 +147,67 @@ final class ProjectService
     }
 
     /** @param  array<string, mixed>  $data */
+    /**
+     * Create / edit a lead. The party is an existing client, a named prospect, or a NEW client registered in the
+     * Client master in the same transaction (`new_client`). Choosing an existing client copies its contact details
+     * when the form left them blank. A `stage` different from the current one goes through moveLead() so every
+     * status change is audited and lost leads always carry a reason.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function saveLead(array $data, User $actor, ?Lead $lead = null): Lead
     {
-        if (empty($data['client_id']) && trim((string) ($data['prospect_name'] ?? '')) === '') {
-            throw new ProjectRejected('Choose a client or enter the prospect name.');
-        }
-        $fields = [
-            'client_id' => $data['client_id'] ?? null, 'prospect_name' => $data['prospect_name'] ?? null, 'title' => $data['title'], 'engagement_type' => $data['engagement_type'] ?? 'project',
-            'estimated_value' => Money::myr((string) ($data['estimated_value'] ?? '0')), 'expected_close' => $data['expected_close'] ?? null, 'source' => $data['source'] ?? null, 'notes' => $data['notes'] ?? null,
-        ];
-        if ($lead === null) {
-            return Lead::query()->create($fields + ['company_id' => $actor->company_id, 'stage' => 'new', 'owner_user_id' => $actor->id]);
-        }
-        $lead->forceFill($fields)->save();
+        return DB::transaction(function () use ($data, $actor, $lead): Lead {
+            if (! empty($data['new_client']) && is_array($data['new_client'])) {
+                $nc = $data['new_client'];
+                if (trim((string) ($nc['name'] ?? '')) === '') {
+                    throw new ProjectRejected('Enter the new client\'s name.');
+                }
+                $client = Client::query()->create([
+                    'company_id' => $actor->company_id, 'name' => trim((string) $nc['name']), 'contact_person' => $data['contact_person'] ?? null,
+                    'email' => $data['contact_email'] ?? null, 'phone' => $data['contact_phone'] ?? null, 'status' => 'active', 'created_by' => $actor->id,
+                ]);
+                $data['client_id'] = $client->id;
+                $data['prospect_name'] = null;
+            }
+            if (empty($data['client_id']) && trim((string) ($data['prospect_name'] ?? '')) === '') {
+                throw new ProjectRejected('Choose a client or enter the prospect name.');
+            }
+            $type = LeadType::tryFrom((string) ($data['engagement_type'] ?? 'project')) ?? throw new ProjectRejected('Unknown opportunity type.');
+            $typeOther = $type === LeadType::Other ? trim((string) ($data['engagement_type_other'] ?? '')) : '';
+            if ($type === LeadType::Other && $typeOther === '') {
+                throw new ProjectRejected('Specify the opportunity type.');
+            }
+            $source = ($data['source'] ?? null) ?: null;
+            $sourceOther = $source === 'Others' ? (trim((string) ($data['source_other'] ?? '')) ?: null) : null;
+            $contact = ['contact_person' => $data['contact_person'] ?? null, 'contact_email' => $data['contact_email'] ?? null, 'contact_phone' => $data['contact_phone'] ?? null];
+            if (! empty($data['client_id']) && ($client = Client::query()->find($data['client_id'])) !== null) {
+                $contact['contact_person'] = ($contact['contact_person'] ?? '') ?: $client->contact_person;
+                $contact['contact_email'] = ($contact['contact_email'] ?? '') ?: $client->email;
+                $contact['contact_phone'] = ($contact['contact_phone'] ?? '') ?: $client->phone;
+            }
+            $fields = $contact + [
+                'client_id' => ($data['client_id'] ?? null) ?: null, 'prospect_name' => empty($data['client_id']) ? ($data['prospect_name'] ?? null) : null,
+                'title' => $data['title'], 'engagement_type' => $type->value, 'engagement_type_other' => $typeOther ?: null,
+                'estimated_value' => Money::myr((string) ($data['estimated_value'] ?? '0')), 'expected_close' => $data['expected_close'] ?? null,
+                'next_follow_up_on' => $data['next_follow_up_on'] ?? null, 'source' => $source, 'source_other' => $sourceOther, 'notes' => $data['notes'] ?? null,
+            ];
+            if ($lead === null) {
+                $lead = Lead::query()->create($fields + ['company_id' => $actor->company_id, 'stage' => 'new', 'owner_user_id' => $actor->id]);
+            } else {
+                $lead->forceFill($fields)->save();
+            }
+            $stage = $data['stage'] ?? null;
+            if (is_string($stage) && $stage !== '' && $stage !== $lead->stage) {
+                $this->moveLead($lead, $stage, $actor, $data['lost_reason'] ?? null, $data['lost_reason_code'] ?? null);
+            }
 
-        return $lead;
+            return $lead;
+        });
     }
 
-    public function moveLead(Lead $lead, string $stage, User $actor, ?string $reason = null): Lead
+    /** Move a lead along the pipeline. Lost needs a reason: a coded reason (Others → explanation) or free text. */
+    public function moveLead(Lead $lead, string $stage, User $actor, ?string $reason = null, ?string $reasonCode = null): Lead
     {
         if (! in_array($stage, Lead::STAGES, true)) {
             throw new ProjectRejected('Unknown stage.');
@@ -169,12 +215,25 @@ final class ProjectService
         if (in_array($lead->stage, ['won', 'lost'], true)) {
             throw new ProjectRejected('This lead is closed.');
         }
-        if ($stage === 'lost' && trim((string) $reason) === '') {
-            throw new ProjectRejected('Say why the lead was lost.');
+        $reason = trim((string) $reason);
+        $code = null;
+        if ($stage === 'lost') {
+            if ($reasonCode !== null && $reasonCode !== '') {
+                $code = LeadLostReason::tryFrom($reasonCode) ?? throw new ProjectRejected('Unknown lost reason.');
+                if ($code === LeadLostReason::Other && $reason === '') {
+                    throw new ProjectRejected('Explain why the lead was lost.');
+                }
+                $reason = $code === LeadLostReason::Other ? $reason : ($reason === '' ? $code->label() : $code->label().' — '.$reason);
+            } elseif ($reason === '') {
+                throw new ProjectRejected('Say why the lead was lost.');
+            }
         }
         $from = $lead->stage;
-        $lead->forceFill(['stage' => $stage, 'lost_reason' => $stage === 'lost' ? $reason : null, 'closed_at' => in_array($stage, ['won', 'lost'], true) ? now() : null])->save();
-        Audit::log('transition', $lead, null, ['stage' => $from], ['stage' => $stage], $reason, $actor);
+        $lead->forceFill([
+            'stage' => $stage, 'lost_reason' => $stage === 'lost' ? $reason : null, 'lost_reason_code' => $code?->value,
+            'closed_at' => in_array($stage, ['won', 'lost'], true) ? now() : null,
+        ])->save();
+        Audit::log('transition', $lead, null, ['stage' => $from], ['stage' => $stage], $stage === 'lost' ? $reason : null, $actor);
 
         return $lead;
     }

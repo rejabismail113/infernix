@@ -14,8 +14,8 @@ import { useT } from '@/lib/i18n';
 import type { SharedProps } from '@/types';
 import { router } from '@inertiajs/vue3';
 
-withDefaults(defineProps<{ title?: string; breadcrumbs?: Crumb[]; status?: string | null; statusLabel?: string }>(), {
-    title: '', breadcrumbs: () => [], status: null, statusLabel: undefined,
+withDefaults(defineProps<{ title?: string; subtitle?: string | null; breadcrumbs?: Crumb[]; status?: string | null; statusLabel?: string }>(), {
+    title: '', subtitle: null, breadcrumbs: () => [], status: null, statusLabel: undefined,
 });
 
 const page = usePage<SharedProps>();
@@ -132,6 +132,7 @@ const setLocale = (locale: 'en' | 'ms') => router.post(route('locale.update'), {
                 <PageHeader
                     v-if="title"
                     :title="title"
+                    :subtitle="subtitle"
                     :status="status"
                     :status-label="statusLabel"
                 >

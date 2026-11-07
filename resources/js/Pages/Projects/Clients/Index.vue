@@ -3,6 +3,7 @@ import { router, useForm } from '@inertiajs/vue3';
 import { reactive, ref } from 'vue';
 import Button from '@/Components/Button.vue';
 import FormField from '@/Components/FormField.vue';
+import Icon from '@/Components/Icon.vue';
 import Modal from '@/Components/Modal.vue';
 import StatusChip from '@/Components/StatusChip.vue';
 import DataTable from '@/Components/Table/DataTable.vue';
@@ -29,16 +30,22 @@ function save() {
 
 <template>
     <AppLayout
-        title="Clients"
-        :breadcrumbs="[{ label: 'Sales' }, { label: 'Clients' }]"
+        title="Clients Management"
+        subtitle="This module serves as a centralized database for managing Infernix's client information, including company details, registration numbers, tax information, contact persons, addresses, and payment terms. Client records are integrated with Sales Pipeline, Project Management, Quotations, Invoices, and Finance to ensure consistent information across all business operations."
+        :breadcrumbs="[{ label: 'Sales' }, { label: 'Clients Management' }]"
     >
         <template #actions>
             <Button
                 v-if="can.create"
+                pill
                 data-test="add-client"
                 @click="edit(null)"
             >
-                Add client
+                <Icon
+                    name="plus"
+                    :size="18"
+                />
+                Add Client
             </Button>
         </template>
         <form
@@ -81,7 +88,7 @@ function save() {
         </DataTable>
         <Modal
             :open="open"
-            :title="editing ? `Edit ${editing.name}` : 'Add client'"
+            :title="editing ? `Edit ${editing.name}` : 'Add Client'"
             size="lg"
             @close="open = false"
         >

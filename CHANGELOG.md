@@ -10,6 +10,10 @@ phases of INF-SRS-001 (P1 … P4). Requirement IDs refer to docs/SRS.md; decisio
 - Quotations, invoices, letters and certificates issued from now on carry the phoenix logo above the company name;
   documents already issued are unchanged.
 
+### Fixed
+- Blank page when the app is opened by LAN IP in development: the Vite dev server now follows `APP_URL` instead of a
+  hard-coded `localhost`.
+
 ## [1.0.0-rc1] — 2026-11-06 — Phase P4 (Prompt 6): hardening, integrations, handover
 
 Release candidate: every P0 requirement is done with tests (docs/TRACEABILITY.md); P1/P2 items still open are listed

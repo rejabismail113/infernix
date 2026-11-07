@@ -22,6 +22,10 @@ change before any shared deployment).
 keeps its old `node_modules`, e.g. "Failed to resolve import chart.js"), runs new migrations, adds new permissions
 and restarts the workers.
 
+**Opening the app from another device (LAN IP)**: set `APP_URL=http://<your-ip>:8010` in `.env`, then
+`docker compose restart vite app`. The dev asset server follows `APP_URL`; with `localhost` there, other devices get a
+blank page because the browser looks for scripts on its own machine. Port 5173 must be reachable too.
+
 ## Quality gates
 
 `make lint` (Pint, Larastan L6, ESLint, vue-tsc) and `make test` (Pest on PostgreSQL, Vitest) must be green

@@ -301,7 +301,7 @@ function save() {
 
         <Modal
             :open="modalOpen"
-            :title="editing ? `Edit lead — ${editing.title}` : 'Add New Lead'"
+            :title="editing ? `Edit lead — ${editing.title}` : 'New Lead'"
             size="lg"
             @close="modalOpen = false"
         >

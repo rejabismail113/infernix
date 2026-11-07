@@ -9,6 +9,7 @@ use App\Kernel\Identity\Enums\RecordScope;
 use App\Kernel\Identity\Models\User;
 use App\Kernel\Identity\Services\PermissionService;
 use App\Kernel\Money\Money;
+use App\Modules\Projects\Enums\LeadType;
 use App\Modules\Projects\Models\Lead;
 use App\Modules\Projects\Models\Milestone;
 use App\Modules\Projects\Models\Project;
@@ -36,9 +37,18 @@ final class ProjectsReports
         }
 
         return [
-            'title' => 'Project pipeline',
-            'columns' => [['key' => 'title', 'label' => 'Opportunity'], ['key' => 'party', 'label' => 'Client / prospect'], ['key' => 'stage', 'label' => 'Stage'], ['key' => 'engagement_type', 'label' => 'Type'], ['key' => 'expected_close', 'label' => 'Expected close'], ['key' => 'estimated_value', 'label' => 'Estimated value', 'numeric' => true]],
-            'rows' => $leads->map(fn (Lead $l): array => ['title' => $l->title, 'party' => $l->partyName(), 'stage' => $l->stage, 'engagement_type' => $l->engagement_type, 'expected_close' => $l->expected_close?->toDateString(), 'estimated_value' => (string) $l->estimated_value->getAmount()])->values()->all(),
+            'title' => 'Leads & Pipeline',
+            'columns' => [['key' => 'title', 'label' => 'Opportunity'], ['key' => 'party', 'label' => 'Client / prospect'], ['key' => 'engagement_type', 'label' => 'Type'], ['key' => 'stage', 'label' => 'Status'],
+                ['key' => 'estimated_value', 'label' => 'Estimated value', 'numeric' => true], ['key' => 'expected_close', 'label' => 'Expected close'], ['key' => 'next_follow_up_on', 'label' => 'Next follow-up'],
+                ['key' => 'source', 'label' => 'Source'], ['key' => 'contact_person', 'label' => 'Contact person'], ['key' => 'contact_email', 'label' => 'Contact email'], ['key' => 'contact_phone', 'label' => 'Contact number'],
+                ['key' => 'lost_reason', 'label' => 'Lost reason']],
+            'rows' => $leads->map(fn (Lead $l): array => [
+                'title' => $l->title, 'party' => $l->partyName(),
+                'engagement_type' => $l->engagement_type === 'other' && $l->engagement_type_other ? $l->engagement_type_other : (LeadType::tryFrom($l->engagement_type)?->label() ?? $l->engagement_type),
+                'stage' => ucfirst($l->stage), 'estimated_value' => (string) $l->estimated_value->getAmount(), 'expected_close' => $l->expected_close?->toDateString(),
+                'next_follow_up_on' => $l->next_follow_up_on?->toDateString(), 'source' => $l->source === 'Others' && $l->source_other ? $l->source_other : $l->source,
+                'contact_person' => $l->contact_person, 'contact_email' => $l->contact_email, 'contact_phone' => $l->contact_phone, 'lost_reason' => $l->lost_reason,
+            ])->values()->all(),
             'totals' => $totals, 'notes' => ['Open pipeline = new + qualified + proposal + negotiation.'],
         ];
     }

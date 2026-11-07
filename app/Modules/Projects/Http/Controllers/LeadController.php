@@ -64,6 +64,7 @@ final class LeadController
             'can' => [
                 'create' => $user->can('create', Lead::class), 'createClient' => $user->can('create', Client::class),
                 'quote' => $this->permissions->can($user, PermissionAction::Create, 'quotations'), 'project' => $this->permissions->can($user, PermissionAction::Create, 'projects'),
+                'export' => $this->permissions->can($user, PermissionAction::Export, 'leads') && $this->permissions->can($user, PermissionAction::Create, 'exports'),
             ],
         ]);
     }

@@ -21,7 +21,7 @@ withDefaults(defineProps<{ title: string; subtitle?: string | null; status?: str
             </div>
             <p
                 v-if="subtitle"
-                class="mt-1.5 max-w-3xl text-sm leading-relaxed text-surface-900/60"
+                class="mt-1 max-w-3xl text-[0.8125rem] leading-relaxed text-surface-900/60"
                 data-test="page-subtitle"
             >
                 {{ subtitle }}

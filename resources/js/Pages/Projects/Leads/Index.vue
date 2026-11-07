@@ -33,7 +33,7 @@ interface Option { value: string; label: string; description?: string }
 const props = defineProps<{
     leads: Lead[]; stages: string[]; stageDescriptions: Record<string, string>; types: Option[]; sources: string[];
     lostReasons: Option[]; clients: ClientOption[];
-    can: { create: boolean; createClient: boolean; quote: boolean; project: boolean };
+    can: { create: boolean; createClient: boolean; quote: boolean; project: boolean; export: boolean };
 }>();
 
 const SUBTITLE = 'This module is used to record and monitor Infernix\'s business opportunities, including potential projects, training programmes, and services. Each opportunity is tracked through different stages: New, Qualified, Proposal, Negotiation, Won, and Lost, enabling effective sales pipeline monitoring, opportunity tracking, and estimated project value management.';
@@ -46,6 +46,12 @@ const fmtDate = (d: string | null) => {
     return `${Number(day)} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][Number(m) - 1]} ${y}`;
 };
 const today = new Date().toISOString().slice(0, 10);
+// Export goes through the audited Export Centre endpoint (plain form POST so the browser follows the redirect to
+// the signed download); the server re-checks leads:export + exports:create and applies the user's row scope.
+const csrf = (typeof document !== 'undefined' ? document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content : '') ?? '';
+const exportOpen = ref(false);
+// Close after the browser has started the POST; removing the form synchronously would cancel the submission.
+const closeExportSoon = () => { setTimeout(() => { exportOpen.value = false; }, 0); };
 
 // ---- Pipeline summary + table -------------------------------------------------------------------------------
 const stageFilter = ref<string | null>(null);
@@ -156,12 +162,6 @@ function save() {
         :breadcrumbs="[{ label: 'Sales' }, { label: 'Leads & Pipeline' }]"
     >
         <template #actions>
-            <Link
-                :href="route('reports.view', 'projects.pipeline')"
-                class="text-sm font-medium text-brand-700 hover:underline"
-            >
-                Pipeline report
-            </Link>
             <Button
                 v-if="can.create"
                 pill
@@ -224,13 +224,72 @@ function save() {
                 :empty-text="leads.length === 0 ? 'No leads yet. Click “New Lead” to record your first opportunity.' : 'No leads match this filter.'"
             >
                 <template #toolbar>
-                    <input
-                        v-model="search"
-                        type="search"
-                        placeholder="Search opportunity, client, contact…"
-                        aria-label="Search leads"
-                        class="w-64 max-w-full"
-                    >
+                    <div class="flex flex-wrap items-center gap-2">
+                        <input
+                            v-model="search"
+                            type="search"
+                            placeholder="Search opportunity, client, contact…"
+                            aria-label="Search leads"
+                            class="w-64 max-w-full"
+                        >
+                        <div
+                            v-if="can.export"
+                            class="relative"
+                            @keydown.esc="exportOpen = false"
+                        >
+                            <button
+                                type="button"
+                                class="inline-flex items-center gap-1.5 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm font-medium text-surface-700 shadow-sm hover:bg-surface-50"
+                                :aria-expanded="exportOpen"
+                                aria-haspopup="menu"
+                                data-test="export-leads"
+                                @click="exportOpen = !exportOpen"
+                            >
+                                <Icon
+                                    name="download"
+                                    :size="16"
+                                />
+                                Export
+                            </button>
+                            <div
+                                v-if="exportOpen"
+                                role="menu"
+                                class="absolute right-0 z-20 mt-1 w-44 rounded-xl border border-surface-200 bg-white p-1 shadow-xl"
+                            >
+                                <form
+                                    v-for="f in [{ v: 'xlsx', l: 'Excel (.xlsx)' }, { v: 'csv', l: 'CSV (.csv)' }]"
+                                    :key="f.v"
+                                    method="post"
+                                    :action="route('reports.exports.store')"
+                                    @submit="closeExportSoon"
+                                >
+                                    <input
+                                        type="hidden"
+                                        name="_token"
+                                        :value="csrf"
+                                    >
+                                    <input
+                                        type="hidden"
+                                        name="report"
+                                        value="projects.pipeline"
+                                    >
+                                    <input
+                                        type="hidden"
+                                        name="format"
+                                        :value="f.v"
+                                    >
+                                    <button
+                                        type="submit"
+                                        role="menuitem"
+                                        class="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-brand-50"
+                                        :data-test="`export-${f.v}`"
+                                    >
+                                        {{ f.l }}
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
                 </template>
                 <template #cell-title="{ row }">
                     <button

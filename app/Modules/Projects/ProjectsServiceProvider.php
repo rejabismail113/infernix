@@ -63,7 +63,7 @@ final class ProjectsServiceProvider extends ServiceProvider
 
         $catalog = $this->app->make(ReportCatalog::class);
         $range = fn (array $f): array => [Carbon::parse($f['from'] ?? today()->startOfYear()->toDateString()), Carbon::parse($f['to'] ?? today()->toDateString())];
-        $catalog->register(new ReportDefinition('projects.pipeline', 'Project pipeline', 'Projects', 'leads', fn (array $f, ?User $u = null): array => app(ProjectsReports::class)->pipeline($u), []));
+        $catalog->register(new ReportDefinition('projects.pipeline', 'Leads & Pipeline', 'Projects', 'leads', fn (array $f, ?User $u = null): array => app(ProjectsReports::class)->pipeline($u), []));
         $catalog->register(new ReportDefinition('projects.overdue-milestones', 'Overdue milestones', 'Projects', 'projects', fn (array $f, ?User $u = null): array => app(ProjectsReports::class)->overdueMilestones($u, Carbon::parse($f['as_of'] ?? today()->toDateString())), ['as_of']));
         $catalog->register(new ReportDefinition('projects.training-register', 'Training register', 'Projects', 'projects', fn (array $f, ?User $u = null): array => app(ProjectsReports::class)->trainingRegister($u, ...$range($f))));
 

@@ -83,3 +83,15 @@ it('rejects unknown types and lost reasons at the database too', function (): vo
     $lead = Lead::query()->create(['company_id' => ownerUser()->company_id, 'prospect_name' => 'X', 'title' => 'Y', 'stage' => 'new', 'owner_user_id' => ownerUser()->id]);
     expect(fn () => $lead->forceFill(['engagement_type' => 'bogus'])->save())->toThrow(QueryException::class);
 })->group('M02-02');
+
+it('exports the leads list with the new columns through the audited Export Centre', function (): void {
+    $owner = ownerUser();
+    actingAsSatisfied($owner)->post(route('projects.leads.store'), leadPayload(['contact_person' => 'Nurul Aisyah', 'next_follow_up_on' => '2026-11-20', 'source' => 'Website']))->assertSessionHasNoErrors();
+    $report = app(App\Modules\Projects\Reports\ProjectsReports::class)->pipeline($owner);
+    expect(array_column($report['columns'], 'label'))->toContain('Next follow-up', 'Contact person', 'Lost reason')
+        ->and($report['rows'][0])->toMatchArray(['engagement_type' => 'Training', 'stage' => 'New', 'contact_person' => 'Nurul Aisyah', 'source' => 'Website']);
+
+    actingAsSatisfied($owner)->get(route('projects.leads.index'))->assertInertia(fn (AssertableInertia $p) => $p->where('can.export', true));
+    actingAsSatisfied($owner)->post(route('reports.exports.store'), ['report' => 'projects.pipeline', 'format' => 'csv'])->assertRedirectContains('/documents/');
+    expect(AuditEvent::query()->where('action', 'export')->exists())->toBeTrue();
+})->group('M02-02', 'M11-05');

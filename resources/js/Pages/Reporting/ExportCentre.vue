@@ -14,7 +14,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 
 interface Report { key: string; name: string; module: string; filters: string[] }
 const props = defineProps<{
-    reports: Report[]; preselect: string | null; defaults: { from: string; to: string; as_of: string };
+    reports: Report[]; preselect: string | null; preselectFormat?: string | null; defaults: { from: string; to: string; as_of: string };
     history: { id: number; report: string; format: string; filters: Record<string, string>; rows: number; created_at: string; download: string | null }[];
     schedules?: { id: number; report: string; format: string; frequency: string; day: number | null; recipients: string[]; active: boolean; last_run_at: string | null; mine: boolean }[];
     users?: { id: number; label: string }[];
@@ -28,6 +28,7 @@ const csrf = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaEleme
 const report = ref(props.reports.find((r) => r.key === props.preselect)?.key ?? props.reports[0]?.key ?? '');
 const current = computed(() => props.reports.find((r) => r.key === report.value));
 const uses = (f: string) => current.value?.filters.includes(f) ?? false;
+const FORMATS = [{ v: 'xlsx', l: 'Excel (.xlsx)' }, { v: 'csv', l: 'CSV (.csv)' }, { v: 'pdf', l: 'PDF (.pdf)' }];
 const modules = computed(() => [...new Set(props.reports.map((r) => r.module))]);
 </script>
 
@@ -85,12 +86,15 @@ const modules = computed(() => [...new Set(props.reports.map((r) => r.module))])
                     <select
                         id="format"
                         name="format"
-                        class="w-full rounded-md border border-surface-300 px-3 py-2 text-sm"
+                        class="w-full"
                     >
-                        <option value="xlsx">
-                            Excel (.xlsx)
-                        </option><option value="csv">
-                            CSV
+                        <option
+                            v-for="f in FORMATS"
+                            :key="f.v"
+                            :value="f.v"
+                            :selected="f.v === (preselectFormat ?? 'xlsx')"
+                        >
+                            {{ f.l }}
                         </option>
                     </select>
                 </FormField>
@@ -210,7 +214,7 @@ const modules = computed(() => [...new Set(props.reports.map((r) => r.module))])
                 </li>
             </ul>
             <form
-                class="grid gap-3 md:grid-cols-5"
+                class="grid gap-3 md:grid-cols-6"
                 @submit.prevent="saveSchedule"
             >
                 <FormField
@@ -229,6 +233,24 @@ const modules = computed(() => [...new Set(props.reports.map((r) => r.module))])
                             :value="r.key"
                         >
                             {{ r.name }}
+                        </option>
+                    </select>
+                </FormField>
+                <FormField
+                    id="sched-format"
+                    label="Format"
+                >
+                    <select
+                        id="sched-format"
+                        v-model="sched.format"
+                        class="w-full"
+                    >
+                        <option
+                            v-for="f in FORMATS"
+                            :key="f.v"
+                            :value="f.v"
+                        >
+                            {{ f.l }}
                         </option>
                     </select>
                 </FormField>

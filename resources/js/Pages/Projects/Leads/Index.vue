@@ -257,7 +257,7 @@ function save() {
                                 class="absolute right-0 z-20 mt-1 w-44 rounded-xl border border-surface-200 bg-white p-1 shadow-xl"
                             >
                                 <form
-                                    v-for="f in [{ v: 'xlsx', l: 'Excel (.xlsx)' }, { v: 'csv', l: 'CSV (.csv)' }]"
+                                    v-for="f in [{ v: 'xlsx', l: 'Excel (.xlsx)' }, { v: 'csv', l: 'CSV (.csv)' }, { v: 'pdf', l: 'PDF (.pdf)' }]"
                                     :key="f.v"
                                     method="post"
                                     :action="route('reports.exports.store')"

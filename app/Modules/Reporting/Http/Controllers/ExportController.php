@@ -41,6 +41,7 @@ final class ExportController
         return Inertia::render('Reporting/ExportCentre', [
             'reports' => array_map(fn (ReportDefinition $r): array => ['key' => $r->key, 'name' => $r->name, 'module' => $r->module, 'filters' => $r->filters], $reports),
             'preselect' => $request->string('report')->toString() ?: null,
+            'preselectFormat' => in_array($request->query('format'), ['csv', 'xlsx', 'pdf'], true) ? $request->query('format') : null,
             'history' => Export::query()->where('user_id', $user->id)->orderByDesc('id')->limit(25)->get()->map(fn (Export $e): array => [
                 'id' => $e->id, 'report' => $this->catalog->find($e->report_key)->name ?? $e->report_key, 'format' => $e->format, 'filters' => $e->filters,
                 'rows' => $e->row_count, 'created_at' => $e->created_at->toIso8601String(), 'download' => $e->document_id !== null ? route('documents.download', ['document' => $e->document_id]) : null,
@@ -58,7 +59,7 @@ final class ExportController
     {
         /** @var User $user */
         $user = $request->user();
-        $data = $request->validate(['report' => ['required', 'string', 'max:80'], 'format' => ['required', 'in:csv,xlsx'], 'frequency' => ['required', 'in:daily,weekly,monthly'],
+        $data = $request->validate(['report' => ['required', 'string', 'max:80'], 'format' => ['required', 'in:csv,xlsx,pdf'], 'frequency' => ['required', 'in:daily,weekly,monthly'],
             'day' => ['nullable', 'integer', 'min:1', 'max:31'], 'recipient_ids' => ['required', 'array', 'min:1', 'max:20'], 'recipient_ids.*' => ['integer', 'exists:users,id']]);
         $def = $this->catalog->find($data['report']);
         abort_if($def === null, 404);
@@ -84,7 +85,7 @@ final class ExportController
         /** @var User $user */
         $user = $request->user();
         $data = $request->validate([
-            'report' => ['required', 'string', 'max:80'], 'format' => ['required', 'in:csv,xlsx'],
+            'report' => ['required', 'string', 'max:80'], 'format' => ['required', 'in:csv,xlsx,pdf'],
             'from' => ['nullable', 'date'], 'to' => ['nullable', 'date'], 'as_of' => ['nullable', 'date'], 'basis' => ['nullable', 'in:accrual,cash'], 'account_id' => ['nullable', 'integer', 'exists:chart_accounts,id'],
         ]);
         $def = $this->catalog->find($data['report']);

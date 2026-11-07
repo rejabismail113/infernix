@@ -81,10 +81,15 @@ describe('<DataTable>', () => {
         expect(again.findAll('thead th').map((t) => t.text())).toEqual(['Name', 'Status']);
     });
 
-    it('shows the export link only when an export endpoint is given', () => {
+    it('shows the export menu only when an export endpoint is given, with CSV and PDF', async () => {
         expect(mount(DataTable, { props: { columns, rows } }).find('[data-test="export-link"]').exists()).toBe(false);
         const w = mount(DataTable, { props: { columns, rows, exportUrl: '/admin/audit-log/export' } });
-        expect(w.get('[data-test="export-link"]').attributes('href')).toBe('/admin/audit-log/export');
+        await w.get('[data-test="export-link"]').trigger('click');
+        expect(w.get('[data-test="export-csv"]').attributes('href')).toBe('/admin/audit-log/export');
+        expect(w.get('[data-test="export-pdf"]').attributes('href')).toBe('/admin/audit-log/export?format=pdf');
+        const f = mount(DataTable, { props: { columns, rows, exportUrl: '/finance/reports/pl/export?year=2026' } });
+        await f.get('[data-test="export-link"]').trigger('click');
+        expect(f.get('[data-test="export-pdf"]').attributes('href')).toBe('/finance/reports/pl/export?year=2026&format=pdf');
     });
 
     it('renders loading skeletons and an empty state', () => {

@@ -4,7 +4,7 @@
  * - Server mode (pass `pagination`): emits `sort`, `page`, `per-page`; rows are shown as given.
  * - Client mode (no `pagination`): sorts the given rows locally.
  * Column visibility and density are remembered per `prefsKey` in localStorage (UI preference only).
- * The Export button is a plain link to an audited server export endpoint — never a client-side dump.
+ * The Export menu links to an audited server export endpoint (CSV, or PDF via `format=pdf`) — never a client-side dump.
  */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import Icon from '@/Components/Icon.vue';
@@ -38,6 +38,16 @@ const density = ref<Density>('normal');
 const hidden = ref<Set<string>>(new Set(props.columns.filter((c) => c.hidden).map((c) => c.key)));
 const localSort = ref<TableSort | null>(props.sort);
 const openMenu = ref<'columns' | 'density' | null>(null);
+// Export menu: the same audited endpoint as CSV (default) or as PDF (`format=pdf`).
+const exportMenu = ref(false);
+const exportFormats = computed(() => {
+    if (!props.exportUrl) return [];
+    const sep = props.exportUrl.includes('?') ? '&' : '?';
+    return [
+        { format: 'csv', label: 'CSV (.csv)', href: props.exportUrl },
+        { format: 'pdf', label: 'PDF (.pdf)', href: `${props.exportUrl}${sep}format=pdf` },
+    ];
+});
 const root = ref<HTMLElement | null>(null);
 
 const visibleColumns = computed(() => props.columns.filter((c) => !hidden.value.has(c.key)));
@@ -201,17 +211,40 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDocClick); docum
                     </button>
                 </div>
             </div>
-            <a
+            <div
                 v-if="exportUrl"
-                :href="exportUrl"
-                class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 font-medium text-surface-700 hover:bg-surface-100"
-                data-test="export-link"
+                class="relative"
+                @keydown.esc="exportMenu = false"
             >
-                <Icon
-                    name="download"
-                    :size="16"
-                /> Export
-            </a>
+                <button
+                    type="button"
+                    class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 font-medium text-surface-700 hover:bg-surface-100"
+                    data-test="export-link"
+                    :aria-expanded="exportMenu"
+                    aria-haspopup="menu"
+                    @click="exportMenu = !exportMenu"
+                >
+                    <Icon
+                        name="download"
+                        :size="16"
+                    /> Export
+                </button>
+                <div
+                    v-if="exportMenu"
+                    role="menu"
+                    class="absolute left-0 z-20 mt-1 w-40 rounded-xl border border-surface-200 bg-white p-1 shadow-xl"
+                >
+                    <a
+                        v-for="f in exportFormats"
+                        :key="f.format"
+                        role="menuitem"
+                        :href="f.href"
+                        class="block rounded-lg px-3 py-2 text-sm hover:bg-brand-50"
+                        :data-test="`export-${f.format}`"
+                        @click="exportMenu = false"
+                    >{{ f.label }}</a>
+                </div>
+            </div>
             <div class="ml-auto flex items-center gap-2">
                 <slot name="toolbar" />
             </div>

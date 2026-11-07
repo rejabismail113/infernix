@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Kernel\Audit\Models\AuditEvent;
 use App\Modules\Projects\Models\Client;
 use App\Modules\Projects\Models\Lead;
+use App\Modules\Projects\Reports\ProjectsReports;
 use Illuminate\Database\QueryException;
 use Inertia\Testing\AssertableInertia;
 
@@ -87,7 +88,7 @@ it('rejects unknown types and lost reasons at the database too', function (): vo
 it('exports the leads list with the new columns through the audited Export Centre', function (): void {
     $owner = ownerUser();
     actingAsSatisfied($owner)->post(route('projects.leads.store'), leadPayload(['contact_person' => 'Nurul Aisyah', 'next_follow_up_on' => '2026-11-20', 'source' => 'Website']))->assertSessionHasNoErrors();
-    $report = app(App\Modules\Projects\Reports\ProjectsReports::class)->pipeline($owner);
+    $report = app(ProjectsReports::class)->pipeline($owner);
     expect(array_column($report['columns'], 'label'))->toContain('Next follow-up', 'Contact person', 'Lost reason')
         ->and($report['rows'][0])->toMatchArray(['engagement_type' => 'Training', 'stage' => 'New', 'contact_person' => 'Nurul Aisyah', 'source' => 'Website']);
 

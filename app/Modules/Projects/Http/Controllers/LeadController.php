@@ -59,8 +59,13 @@ final class LeadController
             'types' => LeadType::options(),
             'sources' => Lead::SOURCES,
             'lostReasons' => LeadLostReason::options(),
-            'clients' => Client::query()->where('status', 'active')->orderBy('name')->get(['id', 'name', 'contact_person', 'email', 'phone'])
-                ->map(fn (Client $c): array => ['id' => $c->id, 'label' => $c->name, 'contact_person' => $c->contact_person, 'email' => $c->email, 'phone' => $c->phone]),
+            'clients' => Client::query()->with('contacts')->whereIn('status', ['active', 'prospect'])->orderBy('name')->get()
+                ->map(function (Client $c): array {
+                    $primary = $c->contacts->first(); // primary first (see Client::contacts())
+
+                    return ['id' => $c->id, 'label' => $c->name, 'contact_person' => $primary->name ?? $c->contact_person,
+                        'email' => $primary?->email ?: $c->email, 'phone' => $primary?->phone ?: $c->phone];
+                }),
             'can' => [
                 'create' => $user->can('create', Lead::class), 'createClient' => $user->can('create', Client::class),
                 'quote' => $this->permissions->can($user, PermissionAction::Create, 'quotations'), 'project' => $this->permissions->can($user, PermissionAction::Create, 'projects'),

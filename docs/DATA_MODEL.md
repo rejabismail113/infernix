@@ -661,6 +661,7 @@ status)`; the rest of §9 procurement arrives in Prompt 5.
 ```mermaid
 erDiagram
     clients ||--o{ projects : has
+    clients ||--o{ client_contacts : has
     clients ||--o{ leads : has
     leads o|--o| commercial_documents : quotation
     projects ||--o{ project_members : team
@@ -680,13 +681,28 @@ erDiagram
     clients {
         bigint id PK
         bigint company_id FK
+        varchar client_code UK "CLT-2026-001"
         varchar name
+        varchar client_type "government glc private individual ngo other"
+        varchar industry
         varchar registration_no
-        varchar tax_no
+        varchar tax_no "TIN"
+        varchar sst_no
+        varchar einvoice_id_type "brn nric passport army"
+        varchar einvoice_id_no
         jsonb address
-        jsonb contacts
-        varchar status
+        varchar contact_person "primary contact (mirror)"
+        varchar status "prospect active inactive"
         timestamptz archived_at
+    }
+    client_contacts {
+        bigint id PK
+        bigint client_id FK
+        varchar name
+        varchar position
+        varchar email
+        varchar phone
+        boolean is_primary "one per client"
     }
     leads {
         bigint id PK

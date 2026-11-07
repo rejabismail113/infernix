@@ -11,6 +11,9 @@ phases of INF-SRS-001 (P1 … P4). Requirement IDs refer to docs/SRS.md; decisio
   follow-up date, lead status on the form and coded lost reasons (Others → explanation). "Assigned To" removed.
   "+ New Lead" pill button; the Add New Lead dialog fits on screen (three columns, no scrolling).
 - Poppins font across the whole app (bundled, no font CDN).
+- **Clients Management**: new Add / Edit Client form — auto Client ID (CLT-2026-001), client type, Prospect / Active /
+  Inactive, industry, TIN, SST no., e-Invoice ID, country and state dropdowns, several contact persons (one primary).
+- **Every export also as PDF**: Export Centre, scheduled report emails and every table's Export menu (CSV / PDF).
 - Dashboard greets the user ("Good Evening, Julaiha 👋") and shows today's date and time (Malaysia time).
 - Product renamed **Infernix Workspace**: redesigned sign-in screens (frosted card, orange waves, phoenix logo), new
   sidebar logo, favicon, page titles, emails and MFA issuer. Company documents keep the Infernix Evolv Hub name.

@@ -17,7 +17,7 @@ interface ClientDirectory
     /**
      * Point-in-time copy stored on issued documents.
      *
-     * @return array{id: int, name: string, registration_no: string|null, tax_no: string|null, email: string|null, phone: string|null, contact_person: string|null, address: array<string, mixed>|null, payment_terms_days: int}|null
+     * @return array{id: int, name: string, registration_no: string|null, tax_no: string|null, email: string|null, phone: string|null, contact_person: string|null, address: array<string, mixed>|null, payment_terms_days: int, client_code?: string|null, sst_no?: string|null, einvoice_id_type?: string|null, einvoice_id_no?: string|null}|null
      */
     public function snapshot(int $clientId): ?array;
 

@@ -31,7 +31,7 @@ final class ProjectService
 {
     private const DELIVERY = ['lead' => ['active', 'closed'], 'active' => ['on_hold', 'completed'], 'on_hold' => ['active', 'completed'], 'completed' => ['active', 'closed']];
 
-    public function __construct(private readonly NumberingService $numbering, private readonly StaffDirectory $staff) {}
+    public function __construct(private readonly NumberingService $numbering, private readonly StaffDirectory $staff, private readonly ClientService $clients) {}
 
     /** @param  array<string, mixed>  $data */
     public function create(array $data, User $actor): Project
@@ -163,10 +163,10 @@ final class ProjectService
                 if (trim((string) ($nc['name'] ?? '')) === '') {
                     throw new ProjectRejected('Enter the new client\'s name.');
                 }
-                $client = Client::query()->create([
-                    'company_id' => $actor->company_id, 'name' => trim((string) $nc['name']), 'contact_person' => $data['contact_person'] ?? null,
-                    'email' => $data['contact_email'] ?? null, 'phone' => $data['contact_phone'] ?? null, 'status' => 'active', 'created_by' => $actor->id,
-                ]);
+                $client = $this->clients->save([
+                    'name' => trim((string) $nc['name']), 'client_type' => 'private', 'status' => 'active', 'payment_terms_days' => 30,
+                    'contacts' => [['name' => $data['contact_person'] ?? null, 'email' => $data['contact_email'] ?? null, 'phone' => $data['contact_phone'] ?? null, 'is_primary' => true]],
+                ], $actor);
                 $data['client_id'] = $client->id;
                 $data['prospect_name'] = null;
             }
@@ -181,10 +181,11 @@ final class ProjectService
             $source = ($data['source'] ?? null) ?: null;
             $sourceOther = $source === 'Others' ? (trim((string) ($data['source_other'] ?? '')) ?: null) : null;
             $contact = ['contact_person' => $data['contact_person'] ?? null, 'contact_email' => $data['contact_email'] ?? null, 'contact_phone' => $data['contact_phone'] ?? null];
-            if (! empty($data['client_id']) && ($client = Client::query()->find($data['client_id'])) !== null) {
-                $contact['contact_person'] = ($contact['contact_person'] ?? '') ?: $client->contact_person;
-                $contact['contact_email'] = ($contact['contact_email'] ?? '') ?: $client->email;
-                $contact['contact_phone'] = ($contact['contact_phone'] ?? '') ?: $client->phone;
+            if (! empty($data['client_id']) && ($client = Client::query()->with('contacts')->find($data['client_id'])) !== null) {
+                $primary = $client->contacts->first();
+                $contact['contact_person'] = ($contact['contact_person'] ?? '') ?: ($primary->name ?? $client->contact_person);
+                $contact['contact_email'] = ($contact['contact_email'] ?? '') ?: ($primary?->email ?: $client->email);
+                $contact['contact_phone'] = ($contact['contact_phone'] ?? '') ?: ($primary?->phone ?: $client->phone);
             }
             $fields = $contact + [
                 'client_id' => ($data['client_id'] ?? null) ?: null, 'prospect_name' => empty($data['client_id']) ? ($data['prospect_name'] ?? null) : null,

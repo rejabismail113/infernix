@@ -16,8 +16,11 @@ final class NumberingSequenceSeeder extends Seeder
         'QUOTATION' => 'QT', 'INVOICE' => 'INV', 'RECEIPT' => 'RC', 'PAYMENT_VOUCHER' => 'PV', 'CREDIT_NOTE' => 'CN',
         'VENDOR_PO' => 'PO', 'CLIENT_PO' => 'CPO', 'JOURNAL' => 'JV', 'CLAIM' => 'CL', 'BILL' => 'BL', 'PURCHASE_REQUEST' => 'PR',
         'MEMO' => 'MEMO', 'LETTER' => 'LTR', 'CERTIFICATE' => 'CERT', 'ASSET' => 'AST', 'PAYMENT_BATCH' => 'PB', 'TRANSACTION' => 'TX', 'PROJECT' => 'PRJ', 'STAFF' => 'ST', 'APPOINTMENT_LETTER' => 'APL',
-        'ACTIVITY' => 'ACT', 'CSR_PROGRAMME' => 'CSR', 'GOODS_RECEIPT' => 'GRN', 'CREDENTIAL' => 'CRD', 'ASSET_DISPOSAL' => 'DSP',
+        'ACTIVITY' => 'ACT', 'CSR_PROGRAMME' => 'CSR', 'GOODS_RECEIPT' => 'GRN', 'CREDENTIAL' => 'CRD', 'ASSET_DISPOSAL' => 'DSP', 'CLIENT' => 'CLT',
     ];
+
+    /** Shorter padding where the owner asked for it (CLT-2026-001). */
+    public const PADDING = ['CLIENT' => 3];
 
     public function run(): void
     {
@@ -26,7 +29,7 @@ final class NumberingSequenceSeeder extends Seeder
             foreach (self::TYPES as $type => $prefix) {
                 NumberingSequence::withoutEvents(fn () => NumberingSequence::query()->firstOrCreate(
                     ['company_id' => $company->id, 'document_type' => $type, 'fiscal_year' => $year],
-                    ['prefix' => $prefix, 'format' => '{prefix}-{year}-{seq}', 'next_number' => 1, 'padding' => 4],
+                    ['prefix' => $prefix, 'format' => '{prefix}-{year}-{seq}', 'next_number' => 1, 'padding' => self::PADDING[$type] ?? 4],
                 ));
             }
         }

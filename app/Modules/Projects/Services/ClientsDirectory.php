@@ -26,6 +26,7 @@ final class ClientsDirectory implements ClientDirectory
         return $c === null ? null : [
             'id' => $c->id, 'name' => $c->name, 'registration_no' => $c->registration_no, 'tax_no' => $c->tax_no, 'email' => $c->email,
             'phone' => $c->phone, 'contact_person' => $c->contact_person, 'address' => $c->address, 'payment_terms_days' => $c->payment_terms_days,
+            'client_code' => $c->client_code, 'sst_no' => $c->sst_no, 'einvoice_id_type' => $c->einvoice_id_type, 'einvoice_id_no' => $c->einvoice_id_no,
         ];
     }
 
@@ -35,7 +36,7 @@ final class ClientsDirectory implements ClientDirectory
             return [];
         }
 
-        return Client::query()->where('status', 'active')->orderBy('name')->limit(500)->get()
+        return Client::query()->whereIn('status', ['active', 'prospect'])->orderBy('name')->limit(500)->get()
             ->map(fn (Client $c): array => ['id' => $c->id, 'label' => $c->name, 'meta' => trim(($c->registration_no ?? '').' '.($c->email ?? ''))])->values()->all();
     }
 }

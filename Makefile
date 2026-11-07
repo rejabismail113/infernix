@@ -33,7 +33,7 @@ setup: ## First-time setup: env, deps, key, migrate, seed, build assets
 
 update: ## After `git pull`: new PHP/JS packages, new migrations, new permissions, restart workers
 	$(APP) composer install --no-interaction --prefer-dist
-	$(DC) exec -T vite npm install
+	$(DC) exec -T vite npm install --no-save --no-audit --no-fund
 	$(APP) php artisan migrate --force --no-interaction
 	$(APP) php artisan db:seed --class=PermissionMatrixSeeder --force --no-interaction
 	$(APP) php artisan optimize:clear

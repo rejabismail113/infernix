@@ -47,7 +47,7 @@ services:
   vite:
     image: node:22-bookworm
     working_dir: /var/www/html
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    command: sh -c "npm install --no-save --no-audit --no-fund && npm run dev -- --host 0.0.0.0"
     volumes:
       - .:/var/www/html
       - node_modules:/var/www/html/node_modules

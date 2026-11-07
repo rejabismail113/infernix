@@ -44,13 +44,26 @@ textarea:not(.field-bare),
 input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='range']):not([type='color']):not([type='hidden']):not([type='submit']):not([type='button']):not(.field-bare),
 .glass-field {
     border: 1px solid var(--glass-border);
-    border-radius: 0.9rem;
+    border-radius: 0.6rem;
     background-color: var(--glass-bg);
     -webkit-backdrop-filter: blur(14px) saturate(180%);
     backdrop-filter: blur(14px) saturate(180%);
     box-shadow: var(--glass-shadow);
     color: theme('colors.surface.900');
     transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+
+/* Default inner spacing + text size. Element-level specificity (0,0,1): beats Tailwind's preflight reset, while
+   padding / text utilities set on a field (e.g. pl-12 for the login icons) still win. */
+select,
+textarea,
+input:where(:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='range']):not([type='color']):not([type='hidden']):not([type='submit']):not([type='button'])) {
+    padding: 0.5rem 0.85rem;
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+.glass-field {
+    font-size: 0.875rem;
 }
 
 select:not(.select-plain):hover:not(:disabled),
@@ -95,7 +108,7 @@ select:not([multiple]):not([size]):not(.select-plain) {
     -webkit-appearance: none;
     appearance: none;
     min-height: 2.6rem;
-    padding: 0.5rem 2.6rem 0.5rem 0.95rem;
+    padding: 0.5rem 2.4rem 0.5rem 0.85rem;
     line-height: 1.4;
     cursor: pointer;
     background-image:

@@ -51,7 +51,7 @@ onBeforeUnmount(() => opener?.focus?.());
     >
         <div
             v-if="open"
-            class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-surface-900/40 p-4 pt-[8vh]"
+            class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-surface-900/40 p-4 sm:pt-[4vh]"
             @mousedown.self="emit('close')"
         >
             <div

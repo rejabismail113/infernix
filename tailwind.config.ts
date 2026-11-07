@@ -41,8 +41,12 @@ export default {
                     900: '#111827',
                 },
             },
-            // No external font CDN (offline-capable, no third-party requests); Inter is used when installed.
-            fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'Roboto', ...defaultTheme.fontFamily.sans] },
+            // Poppins everywhere (owner request), bundled via @fontsource — no font CDN, offline-capable. `mono` maps to
+            // Poppins too so amounts / document numbers match; `tabular-nums` keeps figures aligned in columns.
+            fontFamily: {
+                sans: ['Poppins', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'Roboto', ...defaultTheme.fontFamily.sans],
+                mono: ['Poppins', 'ui-sans-serif', 'system-ui', ...defaultTheme.fontFamily.sans],
+            },
         },
     },
     plugins: [],

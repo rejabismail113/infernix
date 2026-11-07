@@ -12,6 +12,7 @@ import Amount from '@/Components/Finance/Amount.vue';
 import MoneyInput from '@/Components/Form/MoneyInput.vue';
 import SearchSelect from '@/Components/Form/SearchSelect.vue';
 import FormField from '@/Components/FormField.vue';
+import Icon from '@/Components/Icon.vue';
 import Modal from '@/Components/Modal.vue';
 import StatusChip from '@/Components/StatusChip.vue';
 import DataTable from '@/Components/Table/DataTable.vue';
@@ -164,9 +165,14 @@ function save() {
             </Link>
             <Button
                 v-if="can.create"
+                pill
                 data-test="add-lead"
                 @click="openForm(null)"
             >
+                <Icon
+                    name="plus"
+                    :size="18"
+                />
                 New Lead
             </Button>
         </template>
@@ -301,16 +307,16 @@ function save() {
 
         <Modal
             :open="modalOpen"
-            :title="editing ? `Edit lead — ${editing.title}` : 'New Lead'"
-            size="lg"
+            :title="editing ? `Edit Lead — ${editing.title}` : 'Add New Lead'"
+            size="xl"
             @close="modalOpen = false"
         >
-            <p class="-mt-1 mb-4 text-sm text-surface-500">
+            <p class="-mt-1 mb-3 text-sm text-surface-500">
                 Fill in the details below to {{ editing ? 'update this' : 'record a new' }} business opportunity.
             </p>
             <form
                 id="lead-form"
-                class="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2"
+                class="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3"
                 novalidate
                 @submit.prevent="save"
             >
@@ -319,7 +325,7 @@ function save() {
                     label="Opportunity Name"
                     required
                     :error="form.errors.title"
-                    class="sm:col-span-2"
+                    class="sm:col-span-2 lg:col-span-3"
                 >
                     <input
                         id="l-title"
@@ -335,6 +341,7 @@ function save() {
                     id="l-client"
                     label="Client"
                     required
+                    :class="party === 'prospect' || party === 'new_client' ? '' : 'sm:col-span-2'"
                     :error="partyMissing ? 'Choose a client, or add a new prospect / client.' : clientError"
                     :hint="party === 'existing' ? 'Contact details are filled in from the Client master.' : undefined"
                 >
@@ -377,10 +384,6 @@ function save() {
                         class="w-full"
                     >
                 </FormField>
-                <div
-                    v-else
-                    class="hidden sm:block"
-                />
 
                 <FormField
                     id="l-type"
@@ -426,7 +429,6 @@ function save() {
                     label="Specify Opportunity Type"
                     required
                     :error="form.errors.engagement_type_other"
-                    class="sm:col-span-2"
                 >
                     <input
                         id="l-type-other"
@@ -476,7 +478,6 @@ function save() {
                     id="l-source-other"
                     label="Specify Source"
                     :error="form.errors.source_other"
-                    class="sm:col-span-2"
                 >
                     <input
                         id="l-source-other"
@@ -601,7 +602,7 @@ function save() {
                     label="Explain why the lead was lost"
                     required
                     :error="form.errors.lost_reason"
-                    class="sm:col-span-2"
+                    class="sm:col-span-2 lg:col-span-3"
                 >
                     <textarea
                         id="l-lost-other"
@@ -616,12 +617,12 @@ function save() {
                     id="l-notes"
                     label="Notes"
                     :error="form.errors.notes"
-                    class="sm:col-span-2"
+                    class="sm:col-span-2 lg:col-span-3"
                 >
                     <textarea
                         id="l-notes"
                         v-model="form.notes"
-                        rows="3"
+                        rows="2"
                         placeholder="Add any additional details or notes…"
                         class="w-full"
                     />
